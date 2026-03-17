@@ -1238,6 +1238,7 @@ table { min-width:600px; }
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
 <script>
 // ============================================================
@@ -1276,11 +1277,20 @@ function initFirebase() {
       firebase.initializeApp(FIREBASE_CONFIG);
       db = firebase.database();
     }
+    // Sign in anonymously so auth != null for all Firebase writes
+    firebase.auth().signInAnonymously().then(() => {
+      console.log('Admin Firebase Auth OK ✅');
+      loadDashboard();
+    }).catch(e => {
+      console.warn('Auth error:', e.message);
+      // Still try to load even if auth fails
+      loadDashboard();
+    });
     console.log('Firebase connected ✅');
     return true;
   } catch(e) {
     console.warn('Firebase error:', e.message);
-    showToast('Firebase connection failed!','danger');
+    showToast('Firebase connection failed! Check internet.','danger');
     return false;
   }
 }
@@ -1300,10 +1310,24 @@ async function fbGet(path, timeoutMs=8000) {
 async function fbSet(path, data) {
   if(!db) return false;
   try {
-    await db.ref(path).set(data);
+    // Wait for auth if not ready
+    await new Promise(resolve => {
+      const unsubscribe = firebase.auth().onAuthStateChanged(user => {
+        unsubscribe();
+        resolve(user);
+      });
+    });
+    if (data === null) {
+      await db.ref(path).remove();
+    } else {
+      await db.ref(path).set(data);
+    }
     return true;
   } catch(e) {
-    console.warn('fbSet error:', path, e);
+    console.warn('fbSet error:', path, e.message);
+    if(e.code === 'PERMISSION_DENIED') {
+      showToast('❌ Permission denied! Check Firebase rules.','danger');
+    }
     return false;
   }
 }
@@ -2092,8 +2116,7 @@ window.addEventListener('load',()=>{
   if(sessionStorage.getItem('adminUnlocked')==='1') {
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('adminApp').classList.add('active');
-    initFirebase();
-    loadDashboard();
+    initFirebase(); // initFirebase calls loadDashboard after auth
   }
 });
 </script>
