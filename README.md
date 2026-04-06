@@ -1,0 +1,2 @@
+# EARNEASY
+New earning app
