@@ -221,7 +221,7 @@ html, body {
 .user-greeting span { color:#16a34a; font-weight:700; }
 
 /* ===== SCREENS ===== */
-.screen { display:none; padding:16px 14px 90px; animation: fadeIn 0.3s ease; }
+.screen { display:none; padding:16px 14px 90px; animation: fadeIn 0.3s ease; overflow-y:auto; max-height:calc(100vh - 60px); }
 .screen.active { display:block; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
@@ -1311,6 +1311,8 @@ body.slow-net .splash-spinner {
 
 
     </div><!-- end offerwallStatic -->
+
+
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:16px;margin-top:6px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
         <i class="fas fa-info-circle" style="color:#16a34a"></i>
@@ -2259,23 +2261,56 @@ async function checkMultiAccount(uid) {
   try {
     const deviceID = await getOrCreateDeviceID();
     const hwFP = getHardwareFingerprint();
-    // Store both IDs for stronger detection
     const combined = deviceID + '_' + hwFP;
     let hash = 0;
     for(let i=0;i<combined.length;i++){hash=((hash<<5)-hash)+combined.charCodeAt(i);hash=hash&hash;}
     const finalFP = Math.abs(hash).toString(36);
     
-    const devSnap = await db.ref('deviceFingerprints/' + finalFP).get();
-    if(devSnap && devSnap.exists() && devSnap.val().uid !== uid) {
-      showModal('🚫', 'Account Limit', 'This device already has an EarnEasy account. One account per device only!', 'error');
-      setTimeout(() => firebase.auth().signOut().catch(()=>{}), 2500);
-      document.getElementById('loginScreen').classList.add('active');
-      return false;
+    // First check: does this UID already have a registered fingerprint?
+    // If yes = returning user = ALWAYS allow (no false positives!)
+    const userFPSnap = await db.ref('users/' + uid + '/deviceFingerprint').get();
+    if(userFPSnap && userFPSnap.exists()) {
+      // Returning user — update their fingerprint and allow
+      db.ref('users/' + uid + '/deviceFingerprint').set(finalFP).catch(()=>{});
+      db.ref('deviceFingerprints/' + finalFP).set({uid, updatedAt: Date.now()}).catch(()=>{});
+      return true; // ← existing user NEVER blocked!
     }
-    // Save to deviceFingerprints
+    
+    const devSnap = await db.ref('deviceFingerprints/' + finalFP).get();
+    if(devSnap && devSnap.exists()) {
+      const existingUid = devSnap.val().uid;
+      if(existingUid && existingUid !== uid) {
+        // Different account on same device
+        // Show which Google account is registered
+        let existingEmail = '';
+        try {
+          const existingSnap = await db.ref('users/' + existingUid + '/email').get();
+          if(existingSnap.exists()) existingEmail = existingSnap.val();
+        } catch(e) {}
+        
+        const msg = existingEmail 
+          ? `This device already has an EarnEasy account linked to: ${existingEmail}
+
+Please login with that account instead.`
+          : 'This device already has an EarnEasy account. Only one account per device is allowed.';
+        
+        showModal('🚫', 'Device Already Registered', msg, 'error');
+        // Log attempt
+        db.ref('multiAccountAttempts').push({
+          attemptedUid: uid, existingUid,
+          fingerprint: finalFP, time: Date.now()
+        }).catch(()=>{});
+        setTimeout(() => firebase.auth().signOut().catch(()=>{}), 3000);
+        document.getElementById('loginScreen').classList.add('active');
+        return false;
+      }
+    }
+    // Register new user's device
     await db.ref('deviceFingerprints/' + finalFP).set({
       uid, updatedAt: Date.now(), ua: navigator.userAgent.substring(0,80)
     }).catch(()=>{});
+    // Save fingerprint to user profile (used to identify returning users)
+    await db.ref('users/' + uid + '/deviceFingerprint').set(finalFP).catch(()=>{});
     
     // ALSO save device info to user profile so admin can see it
     const _devModel = getDetailedDeviceName(navigator.userAgent);
@@ -3608,7 +3643,7 @@ function renderTasks(tasks, container) {
           <div class="task-coins"><i class="fas fa-coins"></i> +${task.coins} Coins</div>
         </div>
       </div>
-      <button class="btn-task ${done?'done':'start'}" id="task-btn-${task.id}" onclick="${done?'':`window._currentTaskType='${task.type||'follow'}';startTask('${task.id}',${task.coins},${task.duration},'${task.link||''}',this,${task.showAd!==false})`}">
+      <button class="btn-task ${done?'done':'start'}" id="task-btn-${task.id}" onclick="${done?'':`window._currentTaskType='${task.type||'follow'}';window._currentTaskAdType='${task.adType||'interstitial'}';startTask('${task.id}',${task.coins},${task.duration},'${task.link||''}',this,${task.showAd!==false})`}">
         ${done ? '✓ Done' : 'START'}
       </button>
     `;
