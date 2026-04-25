@@ -40,6 +40,7 @@ FIREBASE RULES - PASTE IN FIREBASE CONSOLE → DATABASE → RULES → PUBLISH:
     "multiAccountAttempts": { ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()", ".write": true },
     "errorLogs": { ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()", ".write": true },
     "wannads_log": { ".read": false, ".write": true },
+    "userFeedback": { ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()", ".write": "auth != null" },
     "$other": { ".read": false, ".write": false }
   }
 }
@@ -917,6 +918,16 @@ body.slow-net .splash-spinner {
         <i class="fas fa-chevron-right" style="margin-left:auto;color:#d1d5db;font-size:0.85rem;"></i>
       </div>
 
+      <!-- Help/Report/Feedback -->
+      <div onclick="openFeedback()" style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all 0.2s;margin-top:4px;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#e5e7eb'">
+        <div style="width:42px;height:42px;border-radius:12px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">💬</div>
+        <div>
+          <div style="font-weight:700;color:#111827;font-size:0.95rem;">Help & Feedback</div>
+          <div style="font-size:0.76rem;color:#9ca3af;margin-top:2px;">Report bugs • Suggest features</div>
+        </div>
+        <i class="fas fa-chevron-right" style="margin-left:auto;color:#d1d5db;font-size:0.85rem;"></i>
+      </div>
+
       <!-- LOGOUT BUTTON (Testing) -->
       <div onclick="confirmLogout()" style="background:#fff;border:1px solid #fee2e2;border-radius:14px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all 0.2s;margin-top:4px;" onmouseover="this.style.borderColor='#ef4444'" onmouseout="this.style.borderColor='#fee2e2'">
         <div style="width:42px;height:42px;border-radius:12px;background:#fef2f2;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🚪</div>
@@ -1516,6 +1527,28 @@ body.slow-net .splash-spinner {
 </div>
 
 <!-- MODAL OVERLAY -->
+<!-- FEEDBACK MODAL -->
+<div id="feedbackModal" style="display:none;position:fixed;inset:0;z-index:9100;background:#00000080;align-items:flex-end;justify-content:center;">
+  <div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-family:Orbitron,sans-serif;font-size:1rem;color:var(--green);">💬 Help & Feedback</div>
+      <button onclick="closeFeedback()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text2);">✕</button>
+    </div>
+    <!-- Type selector -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+      <button onclick="selectFeedbackType('bug')" id="fb-bug" class="fb-type-btn" style="padding:10px 6px;border:2px solid #ef444440;border-radius:12px;background:#ef444410;color:#ef4444;font-size:0.78rem;font-weight:700;cursor:pointer;">🐛 Bug Report</button>
+      <button onclick="selectFeedbackType('feature')" id="fb-feature" class="fb-type-btn" style="padding:10px 6px;border:2px solid #3b82f640;border-radius:12px;background:#3b82f610;color:#3b82f6;font-size:0.78rem;font-weight:700;cursor:pointer;">✨ New Feature</button>
+      <button onclick="selectFeedbackType('help')" id="fb-help" class="fb-type-btn" style="padding:10px 6px;border:2px solid #f59e0b40;border-radius:12px;background:#f59e0b10;color:#f59e0b;font-size:0.78rem;font-weight:700;cursor:pointer;">❓ Need Help</button>
+    </div>
+    <input id="fb-subject" placeholder="Subject / Title" style="width:100%;padding:12px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:0.9rem;margin-bottom:10px;box-sizing:border-box;background:var(--card2);" maxlength="100"/>
+    <textarea id="fb-message" placeholder="Describe your issue, idea or question in detail..." style="width:100%;padding:12px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:0.88rem;min-height:120px;resize:none;box-sizing:border-box;background:var(--card2);font-family:Rajdhani,sans-serif;" maxlength="1000"></textarea>
+    <div style="font-size:0.72rem;color:var(--text3);margin:6px 0 14px;text-align:right;" id="fb-char-count">0/1000</div>
+    <button onclick="submitFeedback()" style="width:100%;padding:14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:14px;font-family:Orbitron,sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;">
+      <i class="fas fa-paper-plane"></i> SEND FEEDBACK
+    </button>
+  </div>
+</div>
+
 <div id="modalOverlay">
   <div class="modal-box">
     <div class="modal-icon" id="modalIcon">✅</div>
@@ -3812,6 +3845,7 @@ function claimPromo() {
           
           // Increment usage count
           db.ref('promoCodes/' + input + '/usedCount').transaction(c => (c||0) + 1).then(r => {
+                // Auto-delete only if maxUses > 0 (not unlimited)
                 if(r.committed && promoData.maxUses > 0 && r.snapshot.val() >= promoData.maxUses) {
                   db.ref('promoCodes/' + input).remove().catch(()=>{});
                 }
@@ -4440,6 +4474,75 @@ function closeNotif() {
 }
 
 // Menu functions
+let _fbType = 'bug';
+function openFeedback() {
+  closeMenu();
+  _fbType = 'bug';
+  document.getElementById('feedbackModal').style.display = 'flex';
+  document.getElementById('fb-subject').value = '';
+  document.getElementById('fb-message').value = '';
+  document.getElementById('fb-char-count').textContent = '0/1000';
+  selectFeedbackType('bug');
+  document.getElementById('fb-message').oninput = function() {
+    document.getElementById('fb-char-count').textContent = this.value.length + '/1000';
+  };
+}
+
+function closeFeedback() {
+  document.getElementById('feedbackModal').style.display = 'none';
+}
+
+function selectFeedbackType(type) {
+  _fbType = type;
+  ['bug','feature','help'].forEach(t => {
+    const btn = document.getElementById('fb-'+t);
+    if(!btn) return;
+    if(t === type) {
+      btn.style.borderWidth = '2.5px';
+      btn.style.opacity = '1';
+    } else {
+      btn.style.borderWidth = '2px';
+      btn.style.opacity = '0.6';
+    }
+  });
+}
+
+async function submitFeedback() {
+  const subject = document.getElementById('fb-subject').value.trim();
+  const message = document.getElementById('fb-message').value.trim();
+  if(!subject) { showToast('⚠️ Please enter a subject!'); return; }
+  if(!message || message.length < 10) { showToast('⚠️ Please describe in more detail!'); return; }
+  if(!firebaseReady || !currentUser) { showToast('❌ No internet!'); return; }
+  
+  const typeLabels = {bug:'🐛 Bug Report', feature:'✨ Feature Request', help:'❓ Help Request'};
+  const feedback = {
+    type: _fbType,
+    typeLabel: typeLabels[_fbType],
+    subject, message,
+    uid: currentUser,
+    userName: userData.name || 'Unknown',
+    userEmail: userData.email || '',
+    timestamp: Date.now(),
+    read: false
+  };
+  
+  try {
+    await db.ref('userFeedback').push(feedback);
+    // Also notify admin
+    await db.ref('adminNotifications/fb_' + Date.now()).set({
+      type: 'feedback',
+      message: `${feedback.typeLabel} from ${feedback.userName}: "${subject}"`,
+      time: Date.now(),
+      data: feedback
+    });
+    closeFeedback();
+    showModal('✅', 'Feedback Sent!', 'Thank you! We will review your feedback and get back to you. 🙏', 'success');
+  } catch(e) {
+    logError(e, 'submitFeedback');
+    showToast('❌ Failed to send. Try again!');
+  }
+}
+
 function confirmLogout() {
   closeMenu();
   showModal('🚪', 'Logout?', 'Are you sure you want to logout? Your progress is saved safely. You can login again anytime.', 'warning', () => {
