@@ -4,104 +4,43 @@ FIREBASE RULES - PASTE IN FIREBASE CONSOLE → DATABASE → RULES → PUBLISH:
 {
   "rules": {
     "users": {
+      ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()",
       "$uid": {
         ".read": "auth != null && (auth.uid == $uid || root.child('adminUIDs').child(auth.uid).exists())",
         ".write": "auth != null && (auth.uid == $uid || root.child('adminUIDs').child(auth.uid).exists())",
         "coins": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999" },
-        "todayEarned": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999" },
-        "totalWithdrawn": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999" },
         "adsWatched": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500" },
         "bonusClaimed": { ".validate": "newData.isBoolean() || newData.isString()" },
         "bonusDate": { ".validate": "newData.isString()" },
         "mathLeft": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
         "captchaLeft": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
         "colorLeft": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
-        "banned": { ".validate": "newData.isBoolean() || newData.isNumber()", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
-        "suspended": { ".validate": "newData.isBoolean() || newData.isNumber()", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
-        "referCode": { ".validate": "newData.isString() && newData.val().length >= 4 && newData.val().length <= 8" },
-        "referCodeUsed": { ".validate": "newData.isString() || newData.isNull()" },
-        "referEarnings": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999" },
-        "pendingReferCoins": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999" },
-        "completedTasks": { ".validate": "newData.hasChildren() || newData.isString() || newData.isNull()" },
-        "withdrawHistory": { ".validate": "newData.hasChildren() || newData.isString() || newData.isNull()" },
-        "usedPromoCodes": { ".validate": "newData.hasChildren() || newData.isString() || newData.isNull()" },
-        "deviceInfo": { ".validate": "newData.hasChildren(['deviceName','deviceModel','lastSeen'])" },
-        "deviceFingerprint": { ".validate": "newData.isString() && newData.val().length >= 6 && newData.val().length <= 64" }
+        "banned": { ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
+        "suspended": { ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
+        "completedTasks": { ".read": "auth != null && (auth.uid == $uid || root.child('adminUIDs').child(auth.uid).exists())", ".write": "auth != null && (auth.uid == $uid || root.child('adminUIDs').child(auth.uid).exists())" },
+        "withdrawHistory": { ".read": "auth != null && (auth.uid == $uid || root.child('adminUIDs').child(auth.uid).exists())", ".write": "auth != null && (auth.uid == $uid || root.child('adminUIDs').child(auth.uid).exists())" },
+        "usedPromoCodes": { ".read": "auth != null && (auth.uid == $uid || root.child('adminUIDs').child(auth.uid).exists())", ".write": "auth != null && (auth.uid == $uid || root.child('adminUIDs').child(auth.uid).exists())" },
+        "deviceInfo": { ".write": "auth != null && (auth.uid == $uid || root.child('adminUIDs').child(auth.uid).exists())" },
+        "deviceFingerprint": { ".write": "auth != null && (auth.uid == $uid || root.child('adminUIDs').child(auth.uid).exists())" }
       }
     },
-    "usernames": {
-      ".read": "auth != null",
-      "$name": {
-        ".write": "auth != null && (!data.exists() || data.val() == auth.uid)",
-        ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 25"
-      }
-    },
-    "adminUIDs": {
-      ".read": "auth != null",
-      "$adminUid": { ".write": "auth != null && (auth.uid == $adminUid || root.child('adminUIDs').child(auth.uid).exists())" }
-    },
-    "referLookup": {
-      ".read": "auth != null",
-      "$code": {
-        ".write": "auth != null && !data.exists()",
-        ".validate": "newData.hasChildren(['uid','referCode']) && newData.child('uid').val() == auth.uid"
-      }
-    },
-    "deviceFingerprints": {
-      ".read": "auth != null",
-      "$fp": {
-        ".write": "auth != null && (!data.exists() || data.child('uid').val() == auth.uid)",
-        ".validate": "newData.hasChildren(['uid','updatedAt']) && newData.child('uid').val() == auth.uid"
-      }
-    },
-    "withdrawRequests": {
-      ".read": "auth != null",
-      "$requestId": {
-        ".write": "auth != null && !data.exists()",
-        ".validate": "newData.hasChildren(['uid','amount','method','timestamp']) && newData.child('uid').val() == auth.uid && newData.child('amount').isNumber() && newData.child('amount').val() > 0"
-      }
-    },
-    "adminNotifications": {
-      ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()",
-      "$requestId": {
-        ".write": "auth != null && !data.exists()",
-        ".validate": "newData.hasChildren(['uid','message','time']) && newData.child('uid').val() == auth.uid"
-      }
-    },
-    "sentNotifications": {
-      ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()",
-      ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()"
-    },
+    "usernames": { ".read": "auth != null", "$name": { ".write": "auth != null && (!data.exists() || data.val() == auth.uid)" } },
+    "adminUIDs": { ".read": "auth != null", "$adminUid": { ".write": "auth != null && (auth.uid == $adminUid || root.child('adminUIDs').child(auth.uid).exists())" } },
+    "referLookup": { ".read": "auth != null", "$code": { ".write": "auth != null && !data.exists()" } },
     "tasks": { ".read": "auth != null", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
     "promoCodes": { ".read": "auth != null", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
     "appSettings": { ".read": "auth != null", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
     "offerwallSettings": { ".read": "auth != null", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
+    "withdrawRequests": { ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()", "$requestId": { ".write": "auth != null" } },
+    "adminNotifications": { ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()", ".write": "auth != null" },
+    "sentNotifications": { ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
     "adminConfig": { ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
-    "multiAccountAttempts": {
-      ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()",
-      ".write": "auth != null",
-      "$pushId": {
-        ".validate": "newData.hasChildren(['attemptedUid','existingUid','fingerprint','time']) && newData.child('attemptedUid').isString()"
-      }
-    },
-    "errorLogs": {
-      ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()",
-      ".write": "auth != null",
-      "$pushId": {
-        ".validate": "newData.hasChildren(['uid','error','context','timestamp']) && newData.child('uid').val() == auth.uid"
-      }
-    },
-    "wannads_log": {
-      ".read": false,
-      ".write": false
-    },
-    "userFeedback": {
-      ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()",
-      ".write": "auth != null",
-      "$pushId": {
-        ".validate": "newData.hasChildren(['uid','message','timestamp']) && newData.child('uid').val() == auth.uid"
-      }
-    },
+    "deviceFingerprints": { ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()", "$fp": { ".write": "auth != null && (!data.exists() || data.child('uid').val() == auth.uid)" } },
+    "multiAccountAttempts": { ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()", ".write": true },
+    "errorLogs": { ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()", ".write": true },
+    "userFeedback": { ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()", ".write": "auth != null" },
+    "wipedAccounts": { ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
+    "wannads_log": { ".read": false, ".write": true },
     "$other": { ".read": false, ".write": false }
   }
 }
@@ -283,9 +222,13 @@ html, body {
 .user-greeting span { color:#16a34a; font-weight:700; }
 
 /* ===== SCREENS ===== */
-.screen { display:none; padding:16px 14px 90px; animation: fadeIn 0.3s ease; }
-.screen.active { display:block; }
+.screen { display:none; padding:16px 14px 90px; animation: fadeIn 0.3s ease; overflow-y:auto; max-height:calc(100vh - 60px); }
+.screen.active { display:block; animation:slideUp 0.25s ease; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+@keyframes popIn { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
 
 /* ===== BOTTOM NAV ===== */
 .bottom-nav {
@@ -413,6 +356,12 @@ html, body {
 .game-icon { font-size:1.6rem; margin-bottom:6px; }
 .game-name { font-size:0.72rem; font-weight:700; color:#374151; letter-spacing:0.3px; }
 .game-coin { font-size:0.68rem; color:var(--green); margin-top:3px; font-weight:600; }
+.streak-card { background:linear-gradient(135deg,#1a1a0a,#2a2000); border:1.5px solid #f59e0b40; border-radius:18px; padding:16px; margin-bottom:14px; }
+.streak-fire { font-size:2rem; animation:pulse 1.5s infinite; display:inline-block; }
+.streak-days { display:flex; gap:6px; margin-top:12px; flex-wrap:wrap; }
+.streak-day { width:36px; height:36px; border-radius:50%; border:2px solid #374151; display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:700; color:var(--text3); flex-shrink:0; }
+.streak-day.done { background:#f59e0b; border-color:#f59e0b; color:#000; }
+.streak-day.today { border-color:#f59e0b; color:#f59e0b; animation:pulse 1s infinite; }
 .game-limit {
   position:absolute; top:6px; right:6px;
   background:#32CD3220; border-radius:6px; padding:1px 5px;
@@ -909,6 +858,25 @@ body.slow-net .splash-spinner {
   </div>
 </div>
 
+<!-- ONBOARDING TUTORIAL -->
+<div id="onboardingOverlay" style="display:none;position:fixed;inset:0;z-index:9500;background:#00000095;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--card);border:2px solid #16a34a40;border-radius:22px;padding:24px;width:100%;max-width:340px;text-align:center;">
+    <div style="font-size:3rem;margin-bottom:12px;" id="ob-icon">🎉</div>
+    <div style="font-family:Orbitron,sans-serif;font-size:1rem;color:var(--green);margin-bottom:8px;" id="ob-title">Welcome to EarnEasy!</div>
+    <div style="font-size:0.85rem;color:var(--text2);line-height:1.6;margin-bottom:20px;" id="ob-desc">Earn real money by watching ads, playing games & completing tasks!</div>
+    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:18px;" id="ob-dots">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--green);" id="ob-dot-0"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:#374151;" id="ob-dot-1"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:#374151;" id="ob-dot-2"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:#374151;" id="ob-dot-3"></div>
+    </div>
+    <button onclick="nextOnboarding()" id="ob-btn" style="width:100%;padding:14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:14px;font-family:Orbitron,sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer;">
+      NEXT →
+    </button>
+    <button onclick="skipOnboarding()" style="width:100%;padding:10px;background:none;border:none;color:var(--text3);font-size:0.78rem;cursor:pointer;margin-top:8px;">Skip Tutorial</button>
+  </div>
+</div>
+
 <!-- GAME CLAIM MODAL -->
 <div id="gameClaimModal" style="display:none;position:fixed;inset:0;z-index:9000;background:#00000080;align-items:center;justify-content:center;">
   <div style="background:#1a2a1a;border:1.5px solid #16a34a40;border-radius:20px;padding:24px;width:90%;max-width:320px;text-align:center;">
@@ -975,6 +943,16 @@ body.slow-net .splash-spinner {
         <div>
           <div style="font-weight:700;color:#111827;font-size:0.95rem;">Customer Support</div>
           <div style="font-size:0.76rem;color:#9ca3af;margin-top:2px;">earneasy@support.com</div>
+        </div>
+        <i class="fas fa-chevron-right" style="margin-left:auto;color:#d1d5db;font-size:0.85rem;"></i>
+      </div>
+
+      <!-- Help/Report/Feedback -->
+      <div onclick="openFeedback()" style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all 0.2s;margin-top:4px;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#e5e7eb'">
+        <div style="width:42px;height:42px;border-radius:12px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">💬</div>
+        <div>
+          <div style="font-weight:700;color:#111827;font-size:0.95rem;">Help & Feedback</div>
+          <div style="font-size:0.76rem;color:#9ca3af;margin-top:2px;">Report bugs • Suggest features</div>
         </div>
         <i class="fas fa-chevron-right" style="margin-left:auto;color:#d1d5db;font-size:0.85rem;"></i>
       </div>
@@ -1304,6 +1282,31 @@ body.slow-net .splash-spinner {
       </div>
     </div>
 
+    <!-- Daily Streak -->
+    <div class="section-title"><i class="fas fa-fire" style="color:#f59e0b"></i> DAILY STREAK</div>
+    <div class="streak-card" id="streakCard">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="streak-fire" id="streakFire">🔥</div>
+        <div>
+          <div style="font-family:Orbitron,sans-serif;font-size:1.1rem;color:#f59e0b;font-weight:900;"><span id="streakCount">0</span> Day Streak!</div>
+          <div style="font-size:0.78rem;color:#9ca3af;margin-top:2px;" id="streakMsg">Open app daily to build your streak</div>
+        </div>
+        <div style="margin-left:auto;text-align:center;">
+          <div style="font-family:Orbitron,sans-serif;font-size:1.2rem;color:#f59e0b;font-weight:900;" id="streakBonus">+0</div>
+          <div style="font-size:0.65rem;color:#9ca3af;">bonus</div>
+        </div>
+      </div>
+      <div class="streak-days" id="streakDays">
+        <div class="streak-day" data-day="1">1</div>
+        <div class="streak-day" data-day="2">2</div>
+        <div class="streak-day" data-day="3">3</div>
+        <div class="streak-day" data-day="4">4</div>
+        <div class="streak-day" data-day="5">5</div>
+        <div class="streak-day" data-day="6">6</div>
+        <div class="streak-day" data-day="7">🎁</div>
+      </div>
+    </div>
+
   </div><!-- end homeScreen -->
 
   <!-- TASK SCREEN -->
@@ -1373,6 +1376,8 @@ body.slow-net .splash-spinner {
 
 
     </div><!-- end offerwallStatic -->
+
+
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:16px;margin-top:6px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
         <i class="fas fa-info-circle" style="color:#16a34a"></i>
@@ -1457,6 +1462,20 @@ body.slow-net .splash-spinner {
         <div style="font-size:1.2rem;margin-bottom:4px;">💰</div>
         <div style="font-family:'Orbitron',sans-serif;font-size:1.3rem;color:#f59e0b;" id="referEarnings">0</div>
         <div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">Refer Earnings</div>
+      </div>
+    </div>
+    <!-- Referral Progress Bar -->
+    <div style="background:var(--card);border:1px solid #32CD3220;border-radius:14px;padding:14px;margin-top:10px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-size:0.8rem;color:var(--text2);">Next milestone</div>
+        <div style="font-size:0.8rem;color:var(--green);font-weight:700;" id="referMilestoneText">5 refers → Bonus!</div>
+      </div>
+      <div style="background:#374151;border-radius:10px;height:10px;overflow:hidden;">
+        <div id="referProgressBar" style="height:100%;background:linear-gradient(90deg,#16a34a,#32CD32);border-radius:10px;width:0%;transition:width 0.5s ease;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;">
+        <div style="font-size:0.72rem;color:var(--text3);" id="referProgressText">0/5 friends</div>
+        <div style="font-size:0.72rem;color:#f59e0b;">🎁 Milestone bonus!</div>
       </div>
     </div>
     <div id="referRuleInfo" style="background:var(--card2);border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:10px;font-size:0.8rem;color:var(--text2);text-align:center;">
@@ -1576,6 +1595,28 @@ body.slow-net .splash-spinner {
 </div>
 
 <!-- MODAL OVERLAY -->
+<!-- FEEDBACK MODAL -->
+<div id="feedbackModal" style="display:none;position:fixed;inset:0;z-index:9100;background:#00000080;align-items:flex-end;justify-content:center;">
+  <div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-family:Orbitron,sans-serif;font-size:1rem;color:var(--green);">💬 Help & Feedback</div>
+      <button onclick="closeFeedback()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text2);">✕</button>
+    </div>
+    <!-- Type selector -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+      <button onclick="selectFeedbackType('bug')" id="fb-bug" class="fb-type-btn" style="padding:10px 6px;border:2px solid #ef444440;border-radius:12px;background:#ef444410;color:#ef4444;font-size:0.78rem;font-weight:700;cursor:pointer;">🐛 Bug Report</button>
+      <button onclick="selectFeedbackType('feature')" id="fb-feature" class="fb-type-btn" style="padding:10px 6px;border:2px solid #3b82f640;border-radius:12px;background:#3b82f610;color:#3b82f6;font-size:0.78rem;font-weight:700;cursor:pointer;">✨ New Feature</button>
+      <button onclick="selectFeedbackType('help')" id="fb-help" class="fb-type-btn" style="padding:10px 6px;border:2px solid #f59e0b40;border-radius:12px;background:#f59e0b10;color:#f59e0b;font-size:0.78rem;font-weight:700;cursor:pointer;">❓ Need Help</button>
+    </div>
+    <input id="fb-subject" placeholder="Subject / Title" style="width:100%;padding:12px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:0.9rem;margin-bottom:10px;box-sizing:border-box;background:var(--card2);" maxlength="100"/>
+    <textarea id="fb-message" placeholder="Describe your issue, idea or question in detail..." style="width:100%;padding:12px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:0.88rem;min-height:120px;resize:none;box-sizing:border-box;background:var(--card2);font-family:Rajdhani,sans-serif;" maxlength="1000"></textarea>
+    <div style="font-size:0.72rem;color:var(--text3);margin:6px 0 14px;text-align:right;" id="fb-char-count">0/1000</div>
+    <button onclick="submitFeedback()" style="width:100%;padding:14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:14px;font-family:Orbitron,sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;">
+      <i class="fas fa-paper-plane"></i> SEND FEEDBACK
+    </button>
+  </div>
+</div>
+
 <div id="modalOverlay">
   <div class="modal-box">
     <div class="modal-icon" id="modalIcon">✅</div>
@@ -1602,104 +1643,59 @@ body.slow-net .splash-spinner {
   "rules": {
     "users": {
       "$uid": {
-        ".read": "auth != null && (auth.uid == $uid || root.child('adminUIDs').child(auth.uid).exists())",
-        ".write": "auth != null && (auth.uid == $uid || root.child('adminUIDs').child(auth.uid).exists())",
-        "coins": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999" },
-        "todayEarned": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999" },
-        "totalWithdrawn": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999" },
-        "adsWatched": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500" },
-        "bonusClaimed": { ".validate": "newData.isBoolean() || newData.isString()" },
-        "bonusDate": { ".validate": "newData.isString()" },
-        "mathLeft": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
-        "captchaLeft": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
-        "colorLeft": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
-        "banned": { ".validate": "newData.isBoolean() || newData.isNumber()", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
-        "suspended": { ".validate": "newData.isBoolean() || newData.isNumber()", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
-        "referCode": { ".validate": "newData.isString() && newData.val().length >= 4 && newData.val().length <= 8" },
-        "referCodeUsed": { ".validate": "newData.isString() || newData.isNull()" },
-        "referEarnings": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999" },
-        "pendingReferCoins": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999" },
-        "completedTasks": { ".validate": "newData.hasChildren() || newData.isString() || newData.isNull()" },
-        "withdrawHistory": { ".validate": "newData.hasChildren() || newData.isString() || newData.isNull()" },
-        "usedPromoCodes": { ".validate": "newData.hasChildren() || newData.isString() || newData.isNull()" },
-        "deviceInfo": { ".validate": "newData.hasChildren(['deviceName','deviceModel','lastSeen'])" },
-        "deviceFingerprint": { ".validate": "newData.isString() && newData.val().length >= 6 && newData.val().length <= 64" }
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid",
+        "coins": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999999"
+        },
+        "banned": {
+          ".write": false
+        },
+        "referCode": {
+          ".validate": "newData.isString() && newData.val().length >= 4 && newData.val().length <= 8"
+        },
+        "withdrawHistory": {
+          ".validate": "newData.isString() || newData.hasChildren()"
+        }
       }
-    },
-    "usernames": {
-      ".read": "auth != null",
-      "$name": {
-        ".write": "auth != null && (!data.exists() || data.val() == auth.uid)",
-        ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 25"
-      }
-    },
-    "adminUIDs": {
-      ".read": "auth != null",
-      "$adminUid": { ".write": "auth != null && (auth.uid == $adminUid || root.child('adminUIDs').child(auth.uid).exists())" }
     },
     "referLookup": {
       ".read": "auth != null",
       "$code": {
-        ".write": "auth != null && !data.exists()",
-        ".validate": "newData.hasChildren(['uid','referCode']) && newData.child('uid').val() == auth.uid"
-      }
-    },
-    "deviceFingerprints": {
-      ".read": "auth != null",
-      "$fp": {
-        ".write": "auth != null && (!data.exists() || data.child('uid').val() == auth.uid)",
-        ".validate": "newData.hasChildren(['uid','updatedAt']) && newData.child('uid').val() == auth.uid"
+        ".write": "auth != null && !data.exists()"
       }
     },
     "withdrawRequests": {
+      ".read": false,
+      "$requestId": {
+        ".write": "auth != null && !data.exists()",
+        ".validate": "newData.hasChildren(['uid','amount','method','timestamp']) && newData.child('uid').val() == auth.uid"
+      }
+    },
+    "tasks": {
       ".read": "auth != null",
-      "$requestId": {
-        ".write": "auth != null && !data.exists()",
-        ".validate": "newData.hasChildren(['uid','amount','method','timestamp']) && newData.child('uid').val() == auth.uid && newData.child('amount').isNumber() && newData.child('amount').val() > 0"
-      }
+      ".write": false
     },
-    "adminNotifications": {
-      ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()",
-      "$requestId": {
-        ".write": "auth != null && !data.exists()",
-        ".validate": "newData.hasChildren(['uid','message','time']) && newData.child('uid').val() == auth.uid"
-      }
+    "promoCodes": {
+      ".read": "auth != null",
+      ".write": false
     },
-    "sentNotifications": {
-      ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()",
-      ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()"
-    },
-    "tasks": { ".read": "auth != null", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
-    "promoCodes": { ".read": "auth != null", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
-    "appSettings": { ".read": "auth != null", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
-    "offerwallSettings": { ".read": "auth != null", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
-    "adminConfig": { ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()", ".write": "auth != null && root.child('adminUIDs').child(auth.uid).exists()" },
-    "multiAccountAttempts": {
-      ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()",
-      ".write": "auth != null",
-      "$pushId": {
-        ".validate": "newData.hasChildren(['attemptedUid','existingUid','fingerprint','time']) && newData.child('attemptedUid').isString()"
-      }
-    },
-    "errorLogs": {
-      ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()",
-      ".write": "auth != null",
-      "$pushId": {
-        ".validate": "newData.hasChildren(['uid','error','context','timestamp']) && newData.child('uid').val() == auth.uid"
-      }
+    "appSettings": {
+      ".read": "auth != null",
+      ".write": false
     },
     "wannads_log": {
       ".read": false,
+      ".write": true
+    },
+    "sentNotifications": {
+      ".read": false,
+      ".write": true
+    },
+    "$other": {
+      ".read": false,
       ".write": false
-    },
-    "userFeedback": {
-      ".read": "auth != null && root.child('adminUIDs').child(auth.uid).exists()",
-      ".write": "auth != null",
-      "$pushId": {
-        ".validate": "newData.hasChildren(['uid','message','timestamp']) && newData.child('uid').val() == auth.uid"
-      }
-    },
-    "$other": { ".read": false, ".write": false }
+    }
   }
 }
 */
@@ -1757,19 +1753,6 @@ function checkRateLimit(actionName, delayMs = 2000) {
   }
   lastActionTime[actionName] = now;
   return true;
-}
-
-function sanitizeText(value, maxLen = 255) {
-  return String(value || '')
-    .replace(/[<>\"'`&]/g, '')
-    .replace(/[\u0000-\u001f\u007f]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .substring(0, maxLen);
-}
-
-function isValidWithdrawMethod(method) {
-  return ['upi','gp','google play'].includes(String(method || '').toLowerCase());
 }
 
 function checkGameCooldown(gameType) {
@@ -1865,6 +1848,12 @@ document.addEventListener('visibilitychange', () => {
     }
   }
 });
+
+function isLowEndDevice() {
+  const ram = navigator.deviceMemory || 4;
+  const cores = navigator.hardwareConcurrency || 4;
+  return ram <= 2 || cores <= 2;
+}
 
 function startNetworkMonitor() {
   const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -1990,6 +1979,10 @@ function scheduleMidnightReset() {
   const msUntilMidnight = istMidnight.getTime() - now.getTime();
   setTimeout(async () => {
     await checkDailyReset();
+  // Lazy load non-critical features after main UI
+  setTimeout(() => {
+    if(typeof loadDynamicOfferwalls === 'function') loadDynamicOfferwalls();
+  }, 1000);
     updateUI();
     scheduleMidnightReset(); // Schedule next day
   }, msUntilMidnight);
@@ -2379,23 +2372,56 @@ async function checkMultiAccount(uid) {
   try {
     const deviceID = await getOrCreateDeviceID();
     const hwFP = getHardwareFingerprint();
-    // Store both IDs for stronger detection
     const combined = deviceID + '_' + hwFP;
     let hash = 0;
     for(let i=0;i<combined.length;i++){hash=((hash<<5)-hash)+combined.charCodeAt(i);hash=hash&hash;}
     const finalFP = Math.abs(hash).toString(36);
     
-    const devSnap = await db.ref('deviceFingerprints/' + finalFP).get();
-    if(devSnap && devSnap.exists() && devSnap.val().uid !== uid) {
-      showModal('🚫', 'Account Limit', 'This device already has an EarnEasy account. One account per device only!', 'error');
-      setTimeout(() => firebase.auth().signOut().catch(()=>{}), 2500);
-      document.getElementById('loginScreen').classList.add('active');
-      return false;
+    // First check: does this UID already have a registered fingerprint?
+    // If yes = returning user = ALWAYS allow (no false positives!)
+    const userFPSnap = await db.ref('users/' + uid + '/deviceFingerprint').get();
+    if(userFPSnap && userFPSnap.exists()) {
+      // Returning user — update their fingerprint and allow
+      db.ref('users/' + uid + '/deviceFingerprint').set(finalFP).catch(()=>{});
+      db.ref('deviceFingerprints/' + finalFP).set({uid, updatedAt: Date.now()}).catch(()=>{});
+      return true; // ← existing user NEVER blocked!
     }
-    // Save to deviceFingerprints
+    
+    const devSnap = await db.ref('deviceFingerprints/' + finalFP).get();
+    if(devSnap && devSnap.exists()) {
+      const existingUid = devSnap.val().uid;
+      if(existingUid && existingUid !== uid) {
+        // Different account on same device
+        // Show which Google account is registered
+        let existingEmail = '';
+        try {
+          const existingSnap = await db.ref('users/' + existingUid + '/email').get();
+          if(existingSnap.exists()) existingEmail = existingSnap.val();
+        } catch(e) {}
+        
+        const msg = existingEmail 
+          ? `This device already has an EarnEasy account linked to: ${existingEmail}
+
+Please login with that account instead.`
+          : 'This device already has an EarnEasy account. Only one account per device is allowed.';
+        
+        showModal('🚫', 'Device Already Registered', msg, 'error');
+        // Log attempt
+        db.ref('multiAccountAttempts').push({
+          attemptedUid: uid, existingUid,
+          fingerprint: finalFP, time: Date.now()
+        }).catch(()=>{});
+        setTimeout(() => firebase.auth().signOut().catch(()=>{}), 3000);
+        document.getElementById('loginScreen').classList.add('active');
+        return false;
+      }
+    }
+    // Register new user's device
     await db.ref('deviceFingerprints/' + finalFP).set({
       uid, updatedAt: Date.now(), ua: navigator.userAgent.substring(0,80)
     }).catch(()=>{});
+    // Save fingerprint to user profile (used to identify returning users)
+    await db.ref('users/' + uid + '/deviceFingerprint').set(finalFP).catch(()=>{});
     
     // ALSO save device info to user profile so admin can see it
     const _devModel = getDetailedDeviceName(navigator.userAgent);
@@ -2409,7 +2435,7 @@ async function checkMultiAccount(uid) {
 }
 
 async function setupNewUser(uid, displayName, email, photoURL, refCode) {
-  const name_clean = sanitizeText(displayName || 'User', 25) || 'User';
+  const name_clean = (displayName||'User').replace(/[<>"'&]/g,'').trim().substring(0,25)||'User';
   
   // Multi-account check - one account per device
   const allowed = await checkMultiAccount(uid);
@@ -2523,6 +2549,10 @@ async function enterApp() {
   }
   window._earnEasyListeners = [];
   await checkDailyReset();
+  // Lazy load non-critical features after main UI
+  setTimeout(() => {
+    if(typeof loadDynamicOfferwalls === 'function') loadDynamicOfferwalls();
+  }, 1000);
 
   // Check ban
   if (userData.banned) {
@@ -2615,6 +2645,10 @@ async function enterApp() {
   if(!_displayName) _displayName = 'User';
   
   document.getElementById('greetName').textContent = _displayName.split(' ')[0];
+  // Show onboarding for new users (first login)
+  if(userData.signupBonusGiven && !localStorage.getItem('ob_done')) {
+    setTimeout(showOnboarding, 1200);
+  }
   const avatarEl = document.getElementById('userAvatar');
   if(avatarEl) {
     if(userData.photoURL && userData.photoURL.length > 5) {
@@ -2630,6 +2664,18 @@ async function enterApp() {
   document.getElementById('referCount').textContent = userData.referCount || 0;
   const refEarnEl = document.getElementById('referEarnings');
   if(refEarnEl) refEarnEl.textContent = (userData.referEarnings || 0).toLocaleString();
+  // Update referral progress bar
+  const rc = userData.referCount || 0;
+  const milestones = [5, 10, 25, 50, 100];
+  const nextMilestone = milestones.find(m => m > rc) || 100;
+  const prevMilestone = milestones.filter(m => m <= rc).pop() || 0;
+  const progress = Math.min(100, ((rc - prevMilestone) / (nextMilestone - prevMilestone)) * 100);
+  const pbEl = document.getElementById('referProgressBar');
+  if(pbEl) pbEl.style.width = progress + '%';
+  const ptEl = document.getElementById('referProgressText');
+  if(ptEl) ptEl.textContent = rc + '/' + nextMilestone + ' friends';
+  const pmEl = document.getElementById('referMilestoneText');
+  if(pmEl) pmEl.textContent = nextMilestone + ' refers → Bonus! 🎁';
   // Show referral rule info
   const refRuleEl = document.getElementById('referRuleInfo');
   if(refRuleEl && window._appSettings) {
@@ -2672,6 +2718,8 @@ async function enterApp() {
   }
   // Schedule midnight IST reset
   scheduleMidnightReset();
+  // Daily streak
+  checkAndUpdateStreak();
   // Check for morning notification (7am IST)
   checkMorningNotification();
   loadNotifications();
@@ -2711,8 +2759,9 @@ async function enterApp() {
       }
     });
     window._earnEasyListeners.push(_coinsRef);
-    // Realtime notifications
+    // Realtime notifications (skip on low-end for performance)
     const _notifRef = db.ref('users/' + currentUser + '/notifications');
+    if(!isLowEndDevice()) {
     _notifRef.on('value', snap => {
       if (snap.exists()) {
         const fbNotifs = snap.val() || [];
@@ -2968,9 +3017,7 @@ function validatePromoCode(code) {
 
 function validateAccount(account, method) {
   if (!account || typeof account !== 'string') return null;
-  account = sanitizeText(account, 255);
-  if (!account) { showToast('❌ Invalid account!'); return null; }
-  if (!isValidWithdrawMethod(method)) { showToast('❌ Invalid withdraw method!'); return null; }
+  account = account.replace(/[<>"'&`]/g, '').trim();
   if (account.length < 3 || account.length > 255) { showToast('❌ Invalid account!'); return null; }
   return account;
 }
@@ -3730,7 +3777,7 @@ function renderTasks(tasks, container) {
           <div class="task-coins"><i class="fas fa-coins"></i> +${task.coins} Coins</div>
         </div>
       </div>
-      <button class="btn-task ${done?'done':'start'}" id="task-btn-${task.id}" onclick="${done?'':`window._currentTaskType='${task.type||'follow'}';startTask('${task.id}',${task.coins},${task.duration},'${task.link||''}',this,${task.showAd!==false})`}">
+      <button class="btn-task ${done?'done':'start'}" id="task-btn-${task.id}" onclick="${done?'':`window._currentTaskType='${task.type||'follow'}';window._currentTaskAdType='${task.adType||'interstitial'}';startTask('${task.id}',${task.coins},${task.duration},'${task.link||''}',this,${task.showAd!==false})`}">
         ${done ? '✓ Done' : 'START'}
       </button>
     `;
@@ -3899,6 +3946,7 @@ function claimPromo() {
           
           // Increment usage count
           db.ref('promoCodes/' + input + '/usedCount').transaction(c => (c||0) + 1).then(r => {
+                // Auto-delete only if maxUses > 0 (not unlimited)
                 if(r.committed && promoData.maxUses > 0 && r.snapshot.val() >= promoData.maxUses) {
                   db.ref('promoCodes/' + input).remove().catch(()=>{});
                 }
@@ -4285,46 +4333,31 @@ function submitWithdraw() {
   if (!checkRateLimit('submitWithdraw', 5000)) return;
   _withdrawProcessing = true;
   setTimeout(() => { _withdrawProcessing = false; }, 10000); // Reset after 10s
-
-  const accountRaw = document.getElementById('accountInput').value;
-  const account = validateAccount(accountRaw, selectedMethod);
+  const account = document.getElementById('accountInput').value.trim();
   const amount = parseFloat(document.getElementById('amountInput').value);
   const effectiveRate = window.COIN_RATE_DYNAMIC || COIN_RATE;
   const requiredCoins = amount / effectiveRate;
 
-  if (!account) {
+  if (!account) { 
+    showModal('⚠️', 'Fill Details', 'Please fill in your payment account details before withdrawing.', 'warning'); 
     _withdrawProcessing = false;
-    showModal('⚠️', 'Fill Details', 'Please fill in your payment account details before withdrawing.', 'warning');
-    return;
+    return; 
   }
-  if (!isValidWithdrawMethod(selectedMethod)) {
-    _withdrawProcessing = false;
-    showModal('❌', 'Invalid Method', 'Please select a valid withdrawal method.', 'error');
-    return;
-  }
-  if (!amount || isNaN(amount) || amount <= 0) { _withdrawProcessing = false; showModal('⚠️', 'Enter Amount', 'Please enter a valid positive amount.', 'warning'); return; }
-  if (amount !== Math.abs(amount)) { _withdrawProcessing = false; showModal('❌', 'Invalid Amount', 'Amount cannot be negative!', 'error'); return; }
+  if (!amount || isNaN(amount) || amount <= 0) { showModal('⚠️', 'Enter Amount', 'Please enter a valid positive amount.', 'warning'); return; }
+  if (amount !== Math.abs(amount)) { showModal('❌', 'Invalid Amount', 'Amount cannot be negative!', 'error'); return; }
   const dynamicMinWithdraw = window._appSettings?.minWithdraw || MIN_WITHDRAW;
   if (amount < dynamicMinWithdraw) { 
-    _withdrawProcessing = false;
     showModal('⚠️', `Minimum ₹${dynamicMinWithdraw}`, `Minimum withdrawal is ₹${dynamicMinWithdraw}. Please select a valid amount.`, 'warning'); 
+    _withdrawProcessing = false;
     return; 
   }
   if ((userData.coins||0) < requiredCoins) {
-    _withdrawProcessing = false;
     showModal('❌', 'Not Enough Coins! 💰', `You need ${Math.round(requiredCoins).toLocaleString()} coins to withdraw ₹${amount}, but you only have ${(userData.coins||0).toLocaleString()} coins. Keep earning!`, 'error');
-    return;
-  }
-
-  const hasPending = (userData.withdrawHistory||[]).some(w => String(w.status||'').toLowerCase() === 'pending');
-  if (hasPending) {
     _withdrawProcessing = false;
-    showModal('⏳', 'Pending Withdrawal', 'You already have a pending withdrawal. Please wait for it to finish before making another request.', 'warning');
     return;
   }
 
   if (!firebaseReady || !currentUser) {
-    _withdrawProcessing = false;
     showModal('❌', 'No Internet', 'Internet required to withdraw!', 'error');
     return;
   }
@@ -4337,7 +4370,7 @@ function submitWithdraw() {
   db.ref('users/' + currentUser + '/coins').transaction(currentCoins => {
     const cur = currentCoins || 0;
     const req = Math.abs(requiredCoins);
-    if (req <= 0 || cur < req) return;
+    if (req <= 0 || cur < req) return; // Abort
     return cur - req;
   }).then(result => {
     if (result.committed) {
@@ -4361,7 +4394,7 @@ function submitWithdraw() {
       updates['users/' + currentUser + '/totalWithdrawn'] = userData.totalWithdrawn;
       updates['users/' + currentUser + '/withdrawHistory'] = userData.withdrawHistory;
       updates['withdrawRequests/' + requestId] = {...wEntry, userName: userData.name, uid: currentUser, requestId, referCode: userData.referCode};
-      updates['adminNotifications/' + requestId] = {type:'withdrawal', uid: currentUser, message: userData.name + ' ne ₹' + amount + ' withdraw manga!', time: Date.now(), data: {...wEntry, userName: userData.name, uid: currentUser, requestId}};
+      updates['adminNotifications/' + requestId] = {type:'withdrawal', message: userData.name + ' ne ₹' + amount + ' withdraw manga!', time: Date.now(), data: {...wEntry, userName: userData.name, uid: currentUser, requestId}};
       return db.ref().update(updates);
     } else {
       throw new Error('Insufficient coins on server');
@@ -4384,7 +4417,6 @@ function submitWithdraw() {
 }
 
 function loadWithdrawHistory() {
-
   const container = document.getElementById('withdrawHistory');
   if(!container) return;
   
@@ -4407,17 +4439,34 @@ function renderWithdrawHistory() {
   if(!container) return;
   const history = userData.withdrawHistory || [];
   if (history.length === 0) {
-    container.innerHTML = `<div class="empty-state"><i class="fas fa-history"></i><p>No withdrawals yet</p></div>`;
+    container.innerHTML = `<div class="empty-state"><i class="fas fa-history"></i><p>No withdrawals yet.<br/><small style="color:var(--text3)">Your withdrawal history will appear here</small></p></div>`;
     return;
   }
   container.innerHTML = history.slice(0,10).map(h => {
-    const statusColor = h.status==='approved'||h.status==='success' ? 'var(--green)' : h.status==='rejected'||h.status==='failed' ? '#ef4444' : '#f59e0b';
-    const statusIcon = h.status==='approved'||h.status==='success' ? '✅' : h.status==='rejected'||h.status==='failed' ? '❌' : '⏳';
-    return `<div class="history-row">
-      <span style="color:var(--text2);font-size:0.72rem">${h.time}</span>
-      <span style="color:var(--green);font-weight:700">${h.amount}</span>
-      <span style="color:var(--text2)">${h.method}</span>
-      <span style="color:${statusColor};font-weight:700;font-size:0.78rem">${statusIcon} ${(h.status||'pending').toUpperCase()}</span>
+    const isApproved = h.status==='approved'||h.status==='success';
+    const isRejected = h.status==='rejected'||h.status==='failed';
+    const isPending = !isApproved && !isRejected;
+    const statusColor = isApproved ? 'var(--green)' : isRejected ? '#ef4444' : '#f59e0b';
+    const statusIcon = isApproved ? '✅' : isRejected ? '❌' : '⏳';
+    // Timeline steps
+    const steps = [
+      {label:'Submitted', done:true},
+      {label:'Processing', done:isApproved||isPending},
+      {label:'Completed', done:isApproved}
+    ];
+    const stepsHtml = steps.map((s,i) => `
+      <div style="display:flex;align-items:center;gap:4px;">
+        <div style="width:18px;height:18px;border-radius:50%;background:${s.done?statusColor:'#374151'};display:flex;align-items:center;justify-content:center;font-size:0.6rem;flex-shrink:0;">${s.done?'✓':'○'}</div>
+        <span style="font-size:0.68rem;color:${s.done?statusColor:'var(--text3)'};">${s.label}</span>
+        ${i<2?`<div style="flex:1;height:2px;background:${s.done&&steps[i+1].done?statusColor:'#374151'};margin:0 4px;"></div>`:''}
+      </div>`).join('');
+    return `<div style="background:var(--card2);border:1px solid ${statusColor}30;border-radius:14px;padding:14px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="color:var(--green);font-weight:800;font-size:1rem;">${h.amount}</span>
+        <span style="color:${statusColor};font-weight:700;font-size:0.78rem;">${statusIcon} ${(h.status||'pending').toUpperCase()}</span>
+      </div>
+      <div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px;">${h.method} • ${h.time}</div>
+      <div style="display:flex;align-items:center;">${stepsHtml}</div>
     </div>`;
   }).join('');
 }
@@ -4543,6 +4592,191 @@ function closeNotif() {
 }
 
 // Menu functions
+let _fbType = 'bug';
+function openFeedback() {
+  closeMenu();
+  _fbType = 'bug';
+  document.getElementById('feedbackModal').style.display = 'flex';
+  document.getElementById('fb-subject').value = '';
+  document.getElementById('fb-message').value = '';
+  document.getElementById('fb-char-count').textContent = '0/1000';
+  selectFeedbackType('bug');
+  document.getElementById('fb-message').oninput = function() {
+    document.getElementById('fb-char-count').textContent = this.value.length + '/1000';
+  };
+}
+
+function closeFeedback() {
+  document.getElementById('feedbackModal').style.display = 'none';
+}
+
+function selectFeedbackType(type) {
+  _fbType = type;
+  ['bug','feature','help'].forEach(t => {
+    const btn = document.getElementById('fb-'+t);
+    if(!btn) return;
+    if(t === type) {
+      btn.style.borderWidth = '2.5px';
+      btn.style.opacity = '1';
+    } else {
+      btn.style.borderWidth = '2px';
+      btn.style.opacity = '0.6';
+    }
+  });
+}
+
+async function submitFeedback() {
+  const subject = document.getElementById('fb-subject').value.trim();
+  const message = document.getElementById('fb-message').value.trim();
+  if(!subject) { showToast('⚠️ Please enter a subject!'); return; }
+  if(!message || message.length < 10) { showToast('⚠️ Please describe in more detail!'); return; }
+  if(!firebaseReady || !currentUser) { showToast('❌ No internet!'); return; }
+  
+  const typeLabels = {bug:'🐛 Bug Report', feature:'✨ Feature Request', help:'❓ Help Request'};
+  const feedback = {
+    type: _fbType,
+    typeLabel: typeLabels[_fbType],
+    subject, message,
+    uid: currentUser,
+    userName: userData.name || 'Unknown',
+    userEmail: userData.email || '',
+    timestamp: Date.now(),
+    read: false
+  };
+  
+  try {
+    await db.ref('userFeedback').push(feedback);
+    // Also notify admin
+    await db.ref('adminNotifications/fb_' + Date.now()).set({
+      type: 'feedback',
+      message: `${feedback.typeLabel} from ${feedback.userName}: "${subject}"`,
+      time: Date.now(),
+      data: feedback
+    });
+    closeFeedback();
+    showModal('✅', 'Feedback Sent!', 'Thank you! We will review your feedback and get back to you. 🙏', 'success');
+  } catch(e) {
+    logError(e, 'submitFeedback');
+    showToast('❌ Failed to send. Try again!');
+  }
+}
+
+// ============================================================
+// ONBOARDING TUTORIAL
+// ============================================================
+const ONBOARDING_STEPS = [
+  { icon:'🎉', title:'Welcome to EarnEasy!', desc:'Earn real money by watching ads, playing games & completing tasks. Withdraw when you reach minimum!' },
+  { icon:'📺', title:'Watch Ads Daily', desc:'Watch up to 30 ads every day and earn 3 coins each. 30 ads = 90 coins = ₹0.90 daily just from ads!' },
+  { icon:'🎮', title:'Play Mini Games', desc:'Math, Captcha & Color games give you 4-6 coins each. Play 20 times per game every day!' },
+  { icon:'💰', title:'Withdraw Anytime', desc:'1000 coins = ₹10. Reach minimum withdrawal amount and cash out to UPI, Bank or Paytm instantly!' }
+];
+let _obStep = 0;
+
+function showOnboarding() {
+  if(localStorage.getItem('ob_done')) return;
+  _obStep = 0;
+  document.getElementById('onboardingOverlay').style.display = 'flex';
+  renderOnboardingStep();
+}
+
+function renderOnboardingStep() {
+  const s = ONBOARDING_STEPS[_obStep];
+  document.getElementById('ob-icon').textContent = s.icon;
+  document.getElementById('ob-title').textContent = s.title;
+  document.getElementById('ob-desc').textContent = s.desc;
+  document.getElementById('ob-btn').textContent = _obStep < ONBOARDING_STEPS.length - 1 ? 'NEXT →' : 'START EARNING! 🚀';
+  for(let i=0; i<4; i++) {
+    const d = document.getElementById('ob-dot-' + i);
+    if(d) d.style.background = i === _obStep ? 'var(--green)' : '#374151';
+  }
+}
+
+function nextOnboarding() {
+  _obStep++;
+  if(_obStep >= ONBOARDING_STEPS.length) { skipOnboarding(); return; }
+  renderOnboardingStep();
+}
+
+function skipOnboarding() {
+  document.getElementById('onboardingOverlay').style.display = 'none';
+  localStorage.setItem('ob_done', '1');
+}
+
+// ============================================================
+// DAILY STREAK SYSTEM
+// ============================================================
+async function checkAndUpdateStreak() {
+  if(!firebaseReady || !currentUser) return;
+  const today = getToday();
+  try {
+    const snap = await db.ref('users/' + currentUser + '/streak').once('value');
+    const s = snap.exists() ? snap.val() : {count:0, lastDay:'', claimed:false};
+    const yesterday = getYesterday();
+    let newStreak = s;
+    
+    if(s.lastDay === today) {
+      // Already visited today
+      renderStreak(s);
+      return;
+    } else if(s.lastDay === yesterday || s.count === 0) {
+      // Consecutive day!
+      newStreak = {count: (s.count||0) + 1, lastDay: today, claimed: false};
+    } else {
+      // Streak broken
+      newStreak = {count: 1, lastDay: today, claimed: false};
+    }
+    
+    // Give streak bonus coins (day 7 = big bonus)
+    const bonusMap = {1:5, 2:8, 3:12, 4:16, 5:22, 6:28, 7:50};
+    const bonus = bonusMap[Math.min(newStreak.count, 7)] || 5;
+    if(!newStreak.claimed) {
+      newStreak.claimed = true;
+      addCoins(bonus, 'Daily Streak Day ' + newStreak.count);
+      showToast('🔥 Day ' + newStreak.count + ' streak! +' + bonus + ' coins!');
+    }
+    
+    userData.streak = newStreak;
+    await db.ref('users/' + currentUser + '/streak').set(newStreak);
+    saveLocal();
+    renderStreak(newStreak);
+  } catch(e) { console.warn('Streak error:', e); }
+}
+
+function getYesterday() {
+  const now = new Date();
+  const ist = new Date(now.getTime() + (5.5 * 60 * 60000));
+  ist.setUTCDate(ist.getUTCDate() - 1);
+  return ist.toISOString().split('T')[0];
+}
+
+function renderStreak(s) {
+  if(!s) return;
+  const count = s.count || 0;
+  const streakEl = document.getElementById('streakCount');
+  if(streakEl) streakEl.textContent = count;
+  const fireEl = document.getElementById('streakFire');
+  if(fireEl) fireEl.textContent = count >= 7 ? '🏆' : count >= 3 ? '🔥' : '✨';
+  const msgEl = document.getElementById('streakMsg');
+  if(msgEl) {
+    if(count === 0) msgEl.textContent = 'Open app daily to build your streak!';
+    else if(count < 7) msgEl.textContent = `${7-count} more days to 7-day bonus! 🎁`;
+    else msgEl.textContent = '7-day streak complete! Amazing! 🏆';
+  }
+  const bonusMap = {1:5, 2:8, 3:12, 4:16, 5:22, 6:28, 7:50};
+  const nextBonus = bonusMap[Math.min((count+1), 7)] || 5;
+  const bonusEl = document.getElementById('streakBonus');
+  if(bonusEl) bonusEl.textContent = '+' + nextBonus;
+  
+  // Update day dots
+  for(let i=1; i<=7; i++) {
+    const dot = document.querySelector(`.streak-day[data-day="${i}"]`);
+    if(!dot) continue;
+    dot.className = 'streak-day';
+    if(i < count % 7 || (count >= 7 && i <= 7)) dot.classList.add('done');
+    else if(i === (count % 7) + 1 || (count === 0 && i === 1)) dot.classList.add('today');
+  }
+}
+
 function confirmLogout() {
   closeMenu();
   showModal('🚪', 'Logout?', 'Are you sure you want to logout? Your progress is saved safely. You can login again anytime.', 'warning', () => {
@@ -4745,40 +4979,38 @@ function showToast(msg) {
 window.addEventListener('load', async () => {
   initFirebase();
 
-  setTimeout(async () => {
-    document.getElementById('splash').style.opacity = '0';
-    setTimeout(() => document.getElementById('splash').style.display = 'none', 600);
+  // Hide splash after 2 seconds regardless
+  setTimeout(() => {
+    const splash = document.getElementById('splash');
+    if(splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 500); }
+  }, 2000);
 
-    // Check Google auth state first
+  setTimeout(async () => {
     if(firebaseReady) {
       firebase.auth().onAuthStateChanged(async (user) => {
+        // Skip if already in app or setup
+        if(document.getElementById('app').classList.contains('active')) return;
+        if(document.getElementById('profileSetupScreen') && document.getElementById('profileSetupScreen').style.display === 'flex') return;
+        
         if(user) {
           currentUser = user.uid;
           const fbLoaded = await loadUserData(user.uid);
           if(fbLoaded) {
-            // Update Google info
             if(user.displayName) userData.name = userData.name || user.displayName;
             if(user.photoURL) userData.photoURL = userData.photoURL || user.photoURL;
             saveLocal();
             enterApp();
           } else {
-            // New Google user - need to setup
-            await setupNewUser(user.uid, user.displayName||'User', user.email||'', user.photoURL||'', '');
+            _pendingGoogleUser = user;
+            showProfileSetup(user);
           }
         } else {
-          // Not signed in
-          const hasLocal = loadLocal();
-          if(hasLocal && !firebaseReady) {
-            enterApp();
-          } else {
-            document.getElementById('loginScreen').classList.add('active');
-          }
+          document.getElementById('loginScreen').classList.add('active');
         }
       });
     } else {
-      const hasLocal = loadLocal();
-      if(hasLocal) enterApp();
-      else document.getElementById('loginScreen').classList.add('active');
+      // Firebase not ready - show login
+      document.getElementById('loginScreen').classList.add('active');
     }
   }, 2200);
 });
@@ -4814,6 +5046,7 @@ if (window.Telegram && window.Telegram.WebApp) {
     const nameEl = document.getElementById('setupNameInput');
     if(nameEl && autoName) nameEl.value = autoName;
   }
+}
 }
 </script>
 </body>
