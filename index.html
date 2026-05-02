@@ -4970,21 +4970,14 @@ function showToast(msg) {
 }
 
 // ============================================================
-// SPLASH & INIT
-// ============================================================
 window.addEventListener('load', async () => {
   initFirebase();
-  startNetworkMonitor();
 
-  // Helper: hide splash and show the given screen
-  function hideSplash() {
+  // Hide splash after 2 seconds regardless — same as original (this worked)
+  setTimeout(() => {
     const splash = document.getElementById('splash');
-    if(splash && splash.style.display !== 'none') {
-      splash.style.transition = 'opacity 0.4s';
-      splash.style.opacity = '0';
-      setTimeout(() => { splash.style.display = 'none'; }, 420);
-    }
-  }
+    if(splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 500); }
+  }, 2000);
 
   // Auth state handler with fallback timeout
   let _authHandled = false;
@@ -4995,28 +4988,16 @@ window.addEventListener('load', async () => {
     const _setupEl = document.getElementById('profileSetupScreen');
     if(_setupEl && _setupEl.style.display === 'flex') return;
     _authHandled = true;
-    hideSplash();
 
     if(user) {
       currentUser = user.uid;
-      // Load from localStorage immediately so UI is not blank
-      const localOk = loadLocal();
-      if(localOk && userData.coins !== undefined) {
-        // Show app instantly from cache, Firebase will sync in background
-        enterApp();
-      }
-      // Then sync from Firebase (background)
       const fbLoaded = await loadUserData(user.uid);
       if(fbLoaded) {
         if(user.displayName) userData.name = userData.name || user.displayName;
         if(user.photoURL) userData.photoURL = userData.photoURL || user.photoURL;
         saveLocal();
-        if(!document.getElementById('app').classList.contains('active')) {
-          enterApp();
-        } else {
-          updateUI();
-        }
-      } else if(!localOk) {
+        enterApp();
+      } else {
         _pendingGoogleUser = user;
         showProfileSetup(user);
       }
@@ -5026,24 +5007,20 @@ window.addEventListener('load', async () => {
   };
 
   if(firebaseReady) {
-    // Register auth listener FIRST (handles normal login flow)
     firebase.auth().onAuthStateChanged(_handleAuth);
-    // Check redirect result in background (handles Google redirect login fallback)
+    // Check redirect result in background (Google redirect login)
     checkRedirectResult().catch(() => {});
   } else {
-    // Firebase didn't load — show login immediately
-    hideSplash();
     document.getElementById('loginScreen').classList.add('active');
   }
 
-  // Fallback: if auth doesn't fire in 4s, show login (was 5s)
+  // Fallback: if auth doesn't fire in 5s, show login
   setTimeout(() => {
     if(!_authHandled) {
       _authHandled = true;
-      hideSplash();
       document.getElementById('loginScreen').classList.add('active');
     }
-  }, 4000);
+  }, 5000);
 });
 
 // Enter key on setup name input
