@@ -53,15 +53,15 @@ FIREBASE RULES - PASTE IN FIREBASE CONSOLE → DATABASE → RULES → PUBLISH:
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <!-- Monetag SDK — Daily Ads & Daily Bonus -->
-<script src='//libtl.com/sdk.js' data-zone='10726400' data-sdk='show_10726400'></script>
+<script async src='//libtl.com/sdk.js' data-zone='10726400' data-sdk='show_10726400'></script>
 <!-- Monetag SDK — Math Game -->
-<script src='//libtl.com/sdk.js' data-zone='10761849' data-sdk='show_10761849'></script>
+<script async src='//libtl.com/sdk.js' data-zone='10761849' data-sdk='show_10761849'></script>
 <!-- Monetag SDK — Captcha Game -->
-<script src='//libtl.com/sdk.js' data-zone='10761857' data-sdk='show_10761857'></script>
+<script async src='//libtl.com/sdk.js' data-zone='10761857' data-sdk='show_10761857'></script>
 <!-- Monetag SDK — Color Match Game -->
-<script src='//libtl.com/sdk.js' data-zone='10761865' data-sdk='show_10761865'></script>
+<script async src='//libtl.com/sdk.js' data-zone='10761865' data-sdk='show_10761865'></script>
 <!-- Monetag SDK — Tasks (Follow & Earn + View & Earn) -->
-<script src='//libtl.com/sdk.js' data-zone='10761884' data-sdk='show_10761884'></script>
+<script async src='//libtl.com/sdk.js' data-zone='10761884' data-sdk='show_10761884'></script>
 <!-- Firebase SDK — loaded in head for early availability -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -740,6 +740,41 @@ body.slow-net .splash-spinner {
 </style>
 </head>
 <body>
+<!-- FAILSAFE: hide splash & show login if anything breaks -->
+<script>
+(function() {
+  var SPLASH_TIMEOUT = 4000; // 4 seconds max
+  var t = setTimeout(function() {
+    try {
+      var s = document.getElementById('splash');
+      if (s) { s.style.opacity = '0'; s.style.display = 'none'; }
+      var l = document.getElementById('loginScreen');
+      if (l && !l.classList.contains('active')) {
+        var app = document.getElementById('app');
+        if (!app || !app.classList.contains('active')) {
+          l.classList.add('active');
+        }
+      }
+    } catch(e) {}
+  }, SPLASH_TIMEOUT);
+  window.__splashFailsafe = t;
+  window.addEventListener('error', function(e) {
+    console.warn('EarnEasy caught global error:', e.message);
+    clearTimeout(t);
+    setTimeout(function() {
+      try {
+        var s = document.getElementById('splash');
+        if (s) { s.style.opacity = '0'; s.style.display = 'none'; }
+        var l = document.getElementById('loginScreen');
+        var app = document.getElementById('app');
+        if (l && !l.classList.contains('active') && (!app || !app.classList.contains('active'))) {
+          l.classList.add('active');
+        }
+      } catch(e2) {}
+    }, 500);
+  });
+})();
+</script>
 
 <!-- SPLASH -->
 <div id="splash">
@@ -2037,10 +2072,14 @@ function saveData() {
 async function loadUserData(uid) {
   if (!firebaseReady) return false;
   try {
-    const snap = await Promise.race([
-      db.ref('users/' + uid).get(),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))
-    ]);
+    // Wait for auth
+    await new Promise(resolve => {
+      const unsub = firebase.auth().onAuthStateChanged(user => {
+        unsub();
+        resolve(user);
+      });
+    });
+    const snap = await db.ref('users/' + uid).get();
     if (snap.exists()) {
       // Firebase = absolute source of truth, overrides everything
       userData = snap.val();
@@ -2596,6 +2635,7 @@ async function enterApp() {
 
   document.getElementById('loginScreen').classList.remove('active');
   document.getElementById('app').classList.add('active');
+  if (window.__splashFailsafe) { clearTimeout(window.__splashFailsafe); }
 
   // Set user info
   // Get name — force from Firebase if missing
@@ -4970,10 +5010,12 @@ function showToast(msg) {
 }
 
 // ============================================================
-window.addEventListener('load', async () => {
+// SPLASH & INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', async () => {
   initFirebase();
 
-  // Hide splash after 2 seconds regardless — same as original (this worked)
+  // Hide splash after 2 seconds regardless
   setTimeout(() => {
     const splash = document.getElementById('splash');
     if(splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 500); }
@@ -4981,14 +5023,14 @@ window.addEventListener('load', async () => {
 
   // Auth state handler with fallback timeout
   let _authHandled = false;
-
+  
   const _handleAuth = async (user) => {
     if(_authHandled) return;
     if(document.getElementById('app').classList.contains('active')) return;
     const _setupEl = document.getElementById('profileSetupScreen');
     if(_setupEl && _setupEl.style.display === 'flex') return;
     _authHandled = true;
-
+    
     if(user) {
       currentUser = user.uid;
       const fbLoaded = await loadUserData(user.uid);
@@ -5008,12 +5050,8 @@ window.addEventListener('load', async () => {
 
   if(firebaseReady) {
     firebase.auth().onAuthStateChanged(_handleAuth);
-    // Check redirect result in background (Google redirect login)
-    checkRedirectResult().catch(() => {});
-  } else {
-    document.getElementById('loginScreen').classList.add('active');
   }
-
+  
   // Fallback: if auth doesn't fire in 5s, show login
   setTimeout(() => {
     if(!_authHandled) {
