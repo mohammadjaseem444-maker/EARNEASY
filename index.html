@@ -740,39 +740,16 @@ body.slow-net .splash-spinner {
 </style>
 </head>
 <body>
-<!-- FAILSAFE: hide splash & show login if anything breaks -->
+<!-- FAILSAFE: only hides splash if it gets stuck -->
 <script>
 (function() {
-  var SPLASH_TIMEOUT = 4000; // 4 seconds max
   var t = setTimeout(function() {
     try {
       var s = document.getElementById('splash');
       if (s) { s.style.opacity = '0'; s.style.display = 'none'; }
-      var l = document.getElementById('loginScreen');
-      if (l && !l.classList.contains('active')) {
-        var app = document.getElementById('app');
-        if (!app || !app.classList.contains('active')) {
-          l.classList.add('active');
-        }
-      }
     } catch(e) {}
-  }, SPLASH_TIMEOUT);
+  }, 4000);
   window.__splashFailsafe = t;
-  window.addEventListener('error', function(e) {
-    console.warn('EarnEasy caught global error:', e.message);
-    clearTimeout(t);
-    setTimeout(function() {
-      try {
-        var s = document.getElementById('splash');
-        if (s) { s.style.opacity = '0'; s.style.display = 'none'; }
-        var l = document.getElementById('loginScreen');
-        var app = document.getElementById('app');
-        if (l && !l.classList.contains('active') && (!app || !app.classList.contains('active'))) {
-          l.classList.add('active');
-        }
-      } catch(e2) {}
-    }, 500);
-  });
 })();
 </script>
 
