@@ -1633,7 +1633,7 @@ body.slow-net .splash-spinner {
 
 <!-- Firebase SDK loaded in <head> -->
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ============================================================
 // FIREBASE CONFIG
 // ============================================================
@@ -4977,7 +4977,7 @@ function showToast(msg) {
 // ============================================================
 // SPLASH & INIT
 // ============================================================
-window.addEventListener('load', async () => {
+async function _appInit() {
   initFirebase();
 
   // Hide splash after 2 seconds regardless
@@ -5013,18 +5013,31 @@ window.addEventListener('load', async () => {
     }
   };
 
-  if(firebaseReady) {
+  // Register auth listener directly - no firebaseReady gate
+  try {
     firebase.auth().onAuthStateChanged(_handleAuth);
+  } catch(e) {
+    // Firebase not ready yet - retry once after short delay
+    setTimeout(() => {
+      try { firebase.auth().onAuthStateChanged(_handleAuth); } catch(e2) {}
+    }, 1000);
   }
   
-  // Fallback: if auth doesn't fire in 5s, show login
+  // Fallback: if auth doesn't fire in 6s, show login
   setTimeout(() => {
     if(!_authHandled) {
       _authHandled = true;
       document.getElementById('loginScreen').classList.add('active');
     }
-  }, 5000);
-});
+  }, 6000);
+}
+
+// Start as soon as DOM is ready (DOMContentLoaded fires after Firebase SDK scripts load)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _appInit);
+} else {
+  _appInit();
+}
 
 // Enter key on setup name input
 const setupNameEl = document.getElementById('setupNameInput');
