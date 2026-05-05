@@ -1633,7 +1633,7 @@ body.slow-net .splash-spinner {
 
 <!-- Firebase SDK loaded in <head> -->
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 // ============================================================
 // FIREBASE CONFIG
 // ============================================================
@@ -4977,7 +4977,7 @@ function showToast(msg) {
 // ============================================================
 // SPLASH & INIT
 // ============================================================
-document.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('load', async () => {
   initFirebase();
 
   // Hide splash after 2 seconds regardless
