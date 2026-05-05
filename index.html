@@ -740,18 +740,6 @@ body.slow-net .splash-spinner {
 </style>
 </head>
 <body>
-<!-- FAILSAFE: only hides splash if it gets stuck -->
-<script>
-(function() {
-  var t = setTimeout(function() {
-    try {
-      var s = document.getElementById('splash');
-      if (s) { s.style.opacity = '0'; s.style.display = 'none'; }
-    } catch(e) {}
-  }, 4000);
-  window.__splashFailsafe = t;
-})();
-</script>
 
 <!-- SPLASH -->
 <div id="splash">
@@ -2612,7 +2600,6 @@ async function enterApp() {
 
   document.getElementById('loginScreen').classList.remove('active');
   document.getElementById('app').classList.add('active');
-  if (window.__splashFailsafe) { clearTimeout(window.__splashFailsafe); }
 
   // Set user info
   // Get name — force from Firebase if missing
@@ -4989,7 +4976,7 @@ function showToast(msg) {
 // ============================================================
 // SPLASH & INIT
 // ============================================================
-document.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('load', async () => {
   initFirebase();
 
   // Hide splash after 2 seconds regardless
