@@ -4977,62 +4977,74 @@ function showToast(msg) {
 // ============================================================
 // SPLASH & INIT
 // ============================================================
+// ---- BULLETPROOF INIT ----
+function _hideSplash() {
+  var s = document.getElementById('splash');
+  if (s) { s.style.opacity = '0'; s.style.display = 'none'; }
+}
+function _showLogin() {
+  _hideSplash();
+  var l = document.getElementById('loginScreen');
+  var a = document.getElementById('app');
+  if (l && !l.classList.contains('active') && (!a || !a.classList.contains('active'))) {
+    l.classList.add('active');
+  }
+}
+
+var _authHandled = false;
+
+async function _handleAuth(user) {
+  if (_authHandled) return;
+  var app = document.getElementById('app');
+  if (app && app.classList.contains('active')) return;
+  var setupEl = document.getElementById('profileSetupScreen');
+  if (setupEl && setupEl.style.display === 'flex') return;
+  _authHandled = true;
+  _hideSplash();
+  if (user) {
+    currentUser = user.uid;
+    var fbLoaded = await loadUserData(user.uid);
+    if (fbLoaded) {
+      if (user.displayName) userData.name = userData.name || user.displayName;
+      if (user.photoURL) userData.photoURL = userData.photoURL || user.photoURL;
+      saveLocal();
+      enterApp();
+    } else {
+      _pendingGoogleUser = user;
+      showProfileSetup(user);
+    }
+  } else {
+    _showLogin();
+  }
+}
+
 async function _appInit() {
+  // Step 1: init Firebase
   initFirebase();
 
-  // Hide splash after 2 seconds regardless
-  setTimeout(() => {
-    const splash = document.getElementById('splash');
-    if(splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 500); }
-  }, 2000);
+  // Step 2: hide splash after 2s no matter what
+  setTimeout(_hideSplash, 2000);
 
-  // Auth state handler with fallback timeout
-  let _authHandled = false;
-  
-  const _handleAuth = async (user) => {
-    if(_authHandled) return;
-    if(document.getElementById('app').classList.contains('active')) return;
-    const _setupEl = document.getElementById('profileSetupScreen');
-    if(_setupEl && _setupEl.style.display === 'flex') return;
-    _authHandled = true;
-    
-    if(user) {
-      currentUser = user.uid;
-      const fbLoaded = await loadUserData(user.uid);
-      if(fbLoaded) {
-        if(user.displayName) userData.name = userData.name || user.displayName;
-        if(user.photoURL) userData.photoURL = userData.photoURL || user.photoURL;
-        saveLocal();
-        enterApp();
-      } else {
-        _pendingGoogleUser = user;
-        showProfileSetup(user);
-      }
-    } else {
-      document.getElementById('loginScreen').classList.add('active');
-    }
-  };
+  // Step 3: absolute fallback - show login after 7s no matter what
+  setTimeout(function() {
+    if (!_authHandled) { _authHandled = true; _showLogin(); }
+  }, 7000);
 
-  // Register auth listener directly - no firebaseReady gate
+  // Step 4: start auth listener
   try {
     firebase.auth().onAuthStateChanged(_handleAuth);
   } catch(e) {
-    // Firebase not ready yet - retry once after short delay
-    setTimeout(() => {
-      try { firebase.auth().onAuthStateChanged(_handleAuth); } catch(e2) {}
-    }, 1000);
+    setTimeout(function() {
+      try { firebase.auth().onAuthStateChanged(_handleAuth); } catch(e2) {
+        // Firebase totally failed - just show login
+        _showLogin();
+      }
+    }, 2000);
   }
-  
-  // Fallback: if auth doesn't fire in 6s, show login
-  setTimeout(() => {
-    if(!_authHandled) {
-      _authHandled = true;
-      document.getElementById('loginScreen').classList.add('active');
-    }
-  }, 6000);
 }
 
-// Start as soon as DOM is ready (DOMContentLoaded fires after Firebase SDK scripts load)
+// Run on DOMContentLoaded (Firebase SDK is blocking so it's ready by then)
+// Also handle case where DOM already loaded
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', _appInit);
 } else {
