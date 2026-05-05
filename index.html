@@ -3815,7 +3815,8 @@ function startTask(id, coins, duration, link, btn, showAd) {
     const taskCooldown = window._appSettings?.taskCooldown || 15;
     const taskDuration = duration || taskCooldown;
     const taskType = window._currentTaskType || 'follow';
-    const adFunc = taskType === 'view' ? showViewAd : showTaskAd;
+    const taskAdType = window._currentTaskAdType || 'interstitial';
+    const adFunc = taskAdType === 'popup' ? showViewAd : showTaskAd;
     
     if (showAd) {
       // START TIMER + AD SIMULTANEOUSLY
@@ -4976,7 +4977,7 @@ function showToast(msg) {
 // ============================================================
 // SPLASH & INIT
 // ============================================================
-window.addEventListener('load', async () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initFirebase();
 
   // Hide splash after 2 seconds regardless
