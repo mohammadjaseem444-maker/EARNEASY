@@ -738,33 +738,6 @@ body.slow-net .splash-spinner {
 }
 
 </style>
-<style>
-#_dbg{position:fixed;bottom:0;left:0;right:0;height:45%;background:#111;color:#0f0;font-size:11px;font-family:monospace;overflow-y:auto;z-index:999999;display:none;padding:8px;}
-#_dbgBtn{position:fixed;bottom:10px;right:10px;z-index:999999;background:#e53;color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:11px;font-weight:bold;cursor:pointer;}
-</style>
-<div id="_dbg"></div>
-<button id="_dbgBtn" onclick="document.getElementById('_dbg').style.display=document.getElementById('_dbg').style.display=='none'?'block':'none'">LOG</button>
-<script>
-(function(){
-  var d=document.getElementById('_dbg');
-  function _log(type,args){
-    var line=document.createElement('div');
-    line.style.borderBottom='1px solid #333';
-    line.style.padding='2px 0';
-    line.style.color=type==='error'?'#f66':type==='warn'?'#fa0':'#0f0';
-    var msg=Array.from(args).map(function(a){try{return typeof a==='object'?JSON.stringify(a):String(a);}catch(e){return String(a);}}).join(' ');
-    line.textContent='['+type.toUpperCase()+'] '+msg;
-    d.appendChild(line);
-    d.scrollTop=d.scrollHeight;
-  }
-  var _ce=console.error,_cw=console.warn,_cl=console.log;
-  console.error=function(){_ce.apply(console,arguments);_log('error',arguments);};
-  console.warn=function(){_cw.apply(console,arguments);_log('warn',arguments);};
-  console.log=function(){_cl.apply(console,arguments);_log('log',arguments);};
-  window.addEventListener('error',function(e){_log('error',[e.message+' ('+e.filename+':'+e.lineno+')']);});
-  window.addEventListener('unhandledrejection',function(e){_log('error',['Promise: '+e.reason]);});
-})();
-</script>
 </head>
 <body>
 
@@ -5004,66 +4977,54 @@ function showToast(msg) {
 // ============================================================
 // SPLASH & INIT
 // ============================================================
-function _hideSplash() {
-  var s = document.getElementById('splash');
-  if (s) { s.style.opacity = '0'; s.style.display = 'none'; }
-}
-function _showLogin() {
-  _hideSplash();
-  var l = document.getElementById('loginScreen');
-  var a = document.getElementById('app');
-  if (l && !l.classList.contains('active') && (!a || !a.classList.contains('active'))) {
-    l.classList.add('active');
-  }
-}
-
-var _authHandled = false;
-
-async function _handleAuth(user) {
-  if (_authHandled) return;
-  var app = document.getElementById('app');
-  if (app && app.classList.contains('active')) return;
-  var setupEl = document.getElementById('profileSetupScreen');
-  if (setupEl && setupEl.style.display === 'flex') return;
-  _authHandled = true;
-  _hideSplash();
-  if (user) {
-    currentUser = user.uid;
-    var fbLoaded = await loadUserData(user.uid);
-    if (fbLoaded) {
-      if (user.displayName) userData.name = userData.name || user.displayName;
-      if (user.photoURL) userData.photoURL = userData.photoURL || user.photoURL;
-      saveLocal();
-      enterApp();
-    } else {
-      _pendingGoogleUser = user;
-      showProfileSetup(user);
-    }
-  } else {
-    _showLogin();
-  }
-}
-
-async function _appInit() {
+window.addEventListener('load', async () => {
   initFirebase();
-  setTimeout(_hideSplash, 2000);
-  setTimeout(function() {
-    if (!_authHandled) { _authHandled = true; _showLogin(); }
-  }, 7000);
-  try {
-    firebase.auth().onAuthStateChanged(_handleAuth);
-  } catch(e) {
-    setTimeout(function() {
-      try { firebase.auth().onAuthStateChanged(_handleAuth); } catch(e2) { _showLogin(); }
-    }, 2000);
-  }
-}
+  startNetworkMonitor();
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _appInit);
-} else {
-  _appInit();
-}
+  // Hide splash after 2 seconds
+  setTimeout(() => {
+    const splash = document.getElementById('splash');
+    if(splash) {
+      splash.style.opacity = '0';
+      setTimeout(() => { splash.style.display = 'none'; }, 600);
+    }
+  }, 2000);
+
+  // Check redirect result from Google
+  await checkRedirectResult();
+
+  // If already in app, skip
+  if(document.getElementById('app').classList.contains('active')) return;
+
+  if(!firebaseReady) {
+    setTimeout(() => {
+      document.getElementById('loginScreen').classList.add('active');
+    }, 2200);
+    return;
+  }
+
+  // Auth state listener
+  firebase.auth().onAuthStateChanged(async (user) => {
+    if(document.getElementById('app').classList.contains('active')) return;
+
+    if(user) {
+      currentUser = user.uid;
+      const fbLoaded = await loadUserData(user.uid);
+      if(fbLoaded) {
+        if(!userData.email && user.email) userData.email = user.email;
+        if(!userData.photoURL && user.photoURL) userData.photoURL = user.photoURL;
+        if(!userData.name && user.displayName) userData.name = user.displayName;
+        saveLocal();
+        enterApp();
+      } else {
+        _pendingGoogleUser = user;
+        showProfileSetup(user);
+      }
+    } else {
+      document.getElementById('loginScreen').classList.add('active');
+    }
+  });
+});
 
 // Enter key on setup name input
 const setupNameEl = document.getElementById('setupNameInput');
