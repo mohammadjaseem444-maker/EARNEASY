@@ -47,9 +47,6 @@ FIREBASE RULES - PASTE IN FIREBASE CONSOLE → DATABASE → RULES → PUBLISH:
 -->
 <html lang="en">
 <head>
-<script src="https://jsdelivr.net"></script>
-<script>eruda.init();</script>
-  
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>EARNEASY</title>
@@ -741,6 +738,33 @@ body.slow-net .splash-spinner {
 }
 
 </style>
+<style>
+#_dbg{position:fixed;bottom:0;left:0;right:0;height:45%;background:#111;color:#0f0;font-size:11px;font-family:monospace;overflow-y:auto;z-index:999999;display:none;padding:8px;}
+#_dbgBtn{position:fixed;bottom:10px;right:10px;z-index:999999;background:#e53;color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:11px;font-weight:bold;cursor:pointer;}
+</style>
+<div id="_dbg"></div>
+<button id="_dbgBtn" onclick="document.getElementById('_dbg').style.display=document.getElementById('_dbg').style.display=='none'?'block':'none'">LOG</button>
+<script>
+(function(){
+  var d=document.getElementById('_dbg');
+  function _log(type,args){
+    var line=document.createElement('div');
+    line.style.borderBottom='1px solid #333';
+    line.style.padding='2px 0';
+    line.style.color=type==='error'?'#f66':type==='warn'?'#fa0':'#0f0';
+    var msg=Array.from(args).map(function(a){try{return typeof a==='object'?JSON.stringify(a):String(a);}catch(e){return String(a);}}).join(' ');
+    line.textContent='['+type.toUpperCase()+'] '+msg;
+    d.appendChild(line);
+    d.scrollTop=d.scrollHeight;
+  }
+  var _ce=console.error,_cw=console.warn,_cl=console.log;
+  console.error=function(){_ce.apply(console,arguments);_log('error',arguments);};
+  console.warn=function(){_cw.apply(console,arguments);_log('warn',arguments);};
+  console.log=function(){_cl.apply(console,arguments);_log('log',arguments);};
+  window.addEventListener('error',function(e){_log('error',[e.message+' ('+e.filename+':'+e.lineno+')']);});
+  window.addEventListener('unhandledrejection',function(e){_log('error',['Promise: '+e.reason]);});
+})();
+</script>
 </head>
 <body>
 
@@ -4980,7 +5004,6 @@ function showToast(msg) {
 // ============================================================
 // SPLASH & INIT
 // ============================================================
-// ---- BULLETPROOF INIT ----
 function _hideSplash() {
   var s = document.getElementById('splash');
   if (s) { s.style.opacity = '0'; s.style.display = 'none'; }
@@ -5022,32 +5045,20 @@ async function _handleAuth(user) {
 }
 
 async function _appInit() {
-  // Step 1: init Firebase
   initFirebase();
-
-  // Step 2: hide splash after 2s no matter what
   setTimeout(_hideSplash, 2000);
-
-  // Step 3: absolute fallback - show login after 7s no matter what
   setTimeout(function() {
     if (!_authHandled) { _authHandled = true; _showLogin(); }
   }, 7000);
-
-  // Step 4: start auth listener
   try {
     firebase.auth().onAuthStateChanged(_handleAuth);
   } catch(e) {
     setTimeout(function() {
-      try { firebase.auth().onAuthStateChanged(_handleAuth); } catch(e2) {
-        // Firebase totally failed - just show login
-        _showLogin();
-      }
+      try { firebase.auth().onAuthStateChanged(_handleAuth); } catch(e2) { _showLogin(); }
     }, 2000);
   }
 }
 
-// Run on DOMContentLoaded (Firebase SDK is blocking so it's ready by then)
-// Also handle case where DOM already loaded
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', _appInit);
 } else {
