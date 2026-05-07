@@ -764,7 +764,7 @@ body.slow-net .splash-spinner {
   <div style="font-family:Orbitron,sans-serif;font-size:1.4rem;color:#16a34a;margin-bottom:12px;">MAINTENANCE</div>
   <p id="maintenanceMsg" style="color:#6b7280;line-height:1.7;font-size:0.95rem;">EarnEasy is under maintenance. We'll be back soon!</p>
   <div style="margin-top:24px;padding:12px 20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;font-size:0.82rem;color:#16a34a;">Please check back later — we'll notify you when we're back! ⏰</div>
-  <a href="mailto:support@earneasy.app" style="display:inline-flex;align-items:center;gap:8px;margin-top:20px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:12px;text-decoration:none;font-family:Rajdhani,sans-serif;font-weight:700;font-size:0.95rem;">
+  <a href="/cdn-cgi/l/email-protection#e6838794888387959f8980808f858f878ad1d1d1a6818b878f8ac885898bd99593848c838592dba3879488a387959fc6b5939696899492" style="display:inline-flex;align-items:center;gap:8px;margin-top:20px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:12px;text-decoration:none;font-family:Rajdhani,sans-serif;font-weight:700;font-size:0.95rem;">
   <i class="fas fa-envelope"></i> Contact Support
 </a>
 </div>
@@ -774,7 +774,7 @@ body.slow-net .splash-spinner {
   <i class="fas fa-ban" style="font-size:4rem;color:var(--danger);margin-bottom:20px;"></i>
   <h1 style="font-family:Orbitron,sans-serif;font-size:1.5rem;color:var(--danger);margin-bottom:12px;">ACCOUNT BANNED</h1>
   <p style="color:#6b7280;line-height:1.7;max-width:300px;">Your account has been banned for violating our Terms of Service.</p>
-  <a href="mailto:support@earneasy.app" style="display:inline-flex;align-items:center;gap:8px;margin-top:20px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:12px;text-decoration:none;font-family:Rajdhani,sans-serif;font-weight:700;font-size:0.95rem;">
+  <a href="/cdn-cgi/l/email-protection#81e4e0f3efe4e0f2f8eee7e7e8e2e8e0edb6b6b6c1e6ece0e8edafe2eeecbef2f4e3ebe4e2f5bcc4e0f3efc4e0f2f8a1d2f4f1f1eef3f5" style="display:inline-flex;align-items:center;gap:8px;margin-top:20px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:12px;text-decoration:none;font-family:Rajdhani,sans-serif;font-weight:700;font-size:0.95rem;">
   <i class="fas fa-envelope"></i> Contact Support
 </a>
 </div>
@@ -988,7 +988,7 @@ body.slow-net .splash-spinner {
     <div style="font-size:0.78rem;color:#92400e;margin-bottom:6px;letter-spacing:1px;">SUSPENDED UNTIL</div>
     <div id="suspendCountdown" style="font-family:Orbitron,sans-serif;font-size:1.6rem;color:#d97706;font-weight:700;">--:--:--</div>
   </div>
-  <a href="mailto:support@earneasy.app" style="display:inline-flex;align-items:center;gap:8px;margin-top:20px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:12px;text-decoration:none;font-family:Rajdhani,sans-serif;font-weight:700;font-size:0.95rem;">
+  <a href="/cdn-cgi/l/email-protection#553034273b3034262c3a33333c363c3439626262153238343c397b363a386a2620373f303621681034273b1034262c75062025253a2721" style="display:inline-flex;align-items:center;gap:8px;margin-top:20px;padding:12px 24px;background:#16a34a;color:#fff;border-radius:12px;text-decoration:none;font-family:Rajdhani,sans-serif;font-weight:700;font-size:0.95rem;">
   <i class="fas fa-envelope"></i> Contact Support
 </a>
 </div>
@@ -4981,38 +4981,39 @@ window.addEventListener('load', async () => {
   initFirebase();
   startNetworkMonitor();
 
-  // Hide splash after 2 seconds regardless
+  // Hide splash after 2 seconds
   setTimeout(() => {
     const splash = document.getElementById('splash');
-    if(splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 500); }
+    if(splash) {
+      splash.style.opacity = '0';
+      setTimeout(() => { splash.style.display = 'none'; }, 600);
+    }
   }, 2000);
 
-  // checkRedirectResult with 3s timeout - never hangs
-  try {
-    await Promise.race([
-      checkRedirectResult(),
-      new Promise(r => setTimeout(r, 3000))
-    ]);
-  } catch(e) {}
+  // Check redirect result from Google
+  await checkRedirectResult();
 
+  // If already in app, skip
   if(document.getElementById('app').classList.contains('active')) return;
 
-  // Auth state handler with fallback timeout
-  let _authHandled = false;
-  
-  const _handleAuth = async (user) => {
-    if(_authHandled) return;
+  if(!firebaseReady) {
+    setTimeout(() => {
+      document.getElementById('loginScreen').classList.add('active');
+    }, 2200);
+    return;
+  }
+
+  // Auth state listener
+  firebase.auth().onAuthStateChanged(async (user) => {
     if(document.getElementById('app').classList.contains('active')) return;
-    const _setupEl = document.getElementById('profileSetupScreen');
-    if(_setupEl && _setupEl.style.display === 'flex') return;
-    _authHandled = true;
-    
+
     if(user) {
       currentUser = user.uid;
       const fbLoaded = await loadUserData(user.uid);
       if(fbLoaded) {
-        if(user.displayName) userData.name = userData.name || user.displayName;
-        if(user.photoURL) userData.photoURL = userData.photoURL || user.photoURL;
+        if(!userData.email && user.email) userData.email = user.email;
+        if(!userData.photoURL && user.photoURL) userData.photoURL = user.photoURL;
+        if(!userData.name && user.displayName) userData.name = user.displayName;
         saveLocal();
         enterApp();
       } else {
@@ -5022,19 +5023,7 @@ window.addEventListener('load', async () => {
     } else {
       document.getElementById('loginScreen').classList.add('active');
     }
-  };
-
-  if(firebaseReady) {
-    firebase.auth().onAuthStateChanged(_handleAuth);
-  }
-  
-  // Fallback: if auth doesn't fire in 5s, show login
-  setTimeout(() => {
-    if(!_authHandled) {
-      _authHandled = true;
-      document.getElementById('loginScreen').classList.add('active');
-    }
-  }, 5000);
+  });
 });
 
 // Enter key on setup name input
