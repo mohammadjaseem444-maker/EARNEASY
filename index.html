@@ -47,6 +47,21 @@ FIREBASE RULES - PASTE IN FIREBASE CONSOLE → DATABASE → RULES → PUBLISH:
 -->
 <html lang="en">
 <head>
+<script>
+// Emergency: 8 second mein guaranteed login screen
+setTimeout(function() {
+  try {
+    var s = document.getElementById('splash');
+    var l = document.getElementById('loginScreen');
+    var a = document.getElementById('app');
+    if (s) { s.style.opacity = '0'; s.style.display = 'none'; }
+    if (l && a && !a.classList.contains('active') && !l.classList.contains('active')) {
+      l.classList.add('active');
+    }
+  } catch(e) {}
+}, 8000);
+</script>
+
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>EARNEASY</title>
@@ -4977,33 +4992,33 @@ function showToast(msg) {
 // ============================================================
 // SPLASH & INIT
 // ============================================================
-window.addEventListener('load', async () => {
+var _appInitDone = false;
+async function _appInit() {
+  if (_appInitDone) return;
+  _appInitDone = true;
+
   initFirebase();
   startNetworkMonitor();
 
-  // Hide splash after 2 seconds
   setTimeout(() => {
     const splash = document.getElementById('splash');
-    if(splash) {
-      splash.style.opacity = '0';
-      setTimeout(() => { splash.style.display = 'none'; }, 600);
-    }
+    if(splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 600); }
   }, 2000);
 
-  // checkRedirectResult with 3s timeout
   try { await Promise.race([checkRedirectResult(), new Promise(r => setTimeout(r, 3000))]); } catch(e) {}
 
   if(document.getElementById('app').classList.contains('active')) return;
 
   if(!firebaseReady) {
-    setTimeout(() => {
-      document.getElementById('loginScreen').classList.add('active');
-    }, 2200);
+    setTimeout(() => { document.getElementById('loginScreen').classList.add('active'); }, 500);
     return;
   }
 
+  let _authHandled = false;
   firebase.auth().onAuthStateChanged(async (user) => {
+    if(_authHandled) return;
     if(document.getElementById('app').classList.contains('active')) return;
+    _authHandled = true;
     if(user) {
       currentUser = user.uid;
       const fbLoaded = await loadUserData(user.uid);
@@ -5021,7 +5036,15 @@ window.addEventListener('load', async () => {
       document.getElementById('loginScreen').classList.add('active');
     }
   });
-});
+
+  setTimeout(() => {
+    if(!_authHandled) { _authHandled = true; document.getElementById('loginScreen').classList.add('active'); }
+  }, 5000);
+}
+
+document.addEventListener('DOMContentLoaded', _appInit);
+window.addEventListener('load', _appInit);
+setTimeout(_appInit, 3000);
 
 // Enter key on setup name input
 const setupNameEl = document.getElementById('setupNameInput');
