@@ -63,9 +63,9 @@ FIREBASE RULES - PASTE IN FIREBASE CONSOLE → DATABASE → RULES → PUBLISH:
 <!-- Monetag SDK — Tasks (Follow & Earn + View & Earn) -->
 <script async src='//libtl.com/sdk.js' data-zone='10761884' data-sdk='show_10761884'></script>
 <!-- Firebase SDK — loaded in head for early availability -->
-<script async src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script async src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-<script async src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
 <style>
 :root {
@@ -4978,43 +4978,32 @@ function showToast(msg) {
 // SPLASH & INIT
 // ============================================================
 window.addEventListener('load', async () => {
+  initFirebase();
   startNetworkMonitor();
 
-  // Splash 2 second mein hide - guaranteed
+  // Hide splash after 2 seconds
   setTimeout(() => {
     const splash = document.getElementById('splash');
-    if(splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 600); }
+    if(splash) {
+      splash.style.opacity = '0';
+      setTimeout(() => { splash.style.display = 'none'; }, 600);
+    }
   }, 2000);
 
-  // Firebase SDK ka wait - max 5 seconds
-  let fbWait = 0;
-  while(typeof firebase === 'undefined' && fbWait < 50) {
-    await new Promise(r => setTimeout(r, 100));
-    fbWait++;
-  }
-
-  // Firebase init
-  initFirebase();
-
-  // Firebase nahi aaya - login show karo
-  if(!firebaseReady) {
-    setTimeout(() => {
-      document.getElementById('loginScreen').classList.add('active');
-    }, 500);
-    return;
-  }
-
-  // checkRedirectResult - 3s timeout, kabhi hang nahi hoga
+  // checkRedirectResult with 3s timeout
   try { await Promise.race([checkRedirectResult(), new Promise(r => setTimeout(r, 3000))]); } catch(e) {}
 
   if(document.getElementById('app').classList.contains('active')) return;
 
-  // Auth state listener - original logic
-  let _authHandled = false;
+  if(!firebaseReady) {
+    setTimeout(() => {
+      document.getElementById('loginScreen').classList.add('active');
+    }, 2200);
+    return;
+  }
+
   firebase.auth().onAuthStateChanged(async (user) => {
-    if(_authHandled) return;
     if(document.getElementById('app').classList.contains('active')) return;
-    _authHandled = true;
     if(user) {
       currentUser = user.uid;
       const fbLoaded = await loadUserData(user.uid);
@@ -5032,14 +5021,6 @@ window.addEventListener('load', async () => {
       document.getElementById('loginScreen').classList.add('active');
     }
   });
-
-  // 5s fallback
-  setTimeout(() => {
-    if(!_authHandled) {
-      _authHandled = true;
-      document.getElementById('loginScreen').classList.add('active');
-    }
-  }, 5000);
 });
 
 // Enter key on setup name input
