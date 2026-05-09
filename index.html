@@ -2157,35 +2157,31 @@ async function loginWithGoogle() {
   } catch(popupErr) {
     console.warn('Popup failed:', popupErr.code);
     
-    // If popup blocked or not supported - use redirect
-    if(popupErr.code === 'auth/popup-blocked' || 
-       popupErr.code === 'auth/popup-closed-by-user' ||
+    // User cancelled - reset button, don't try redirect
+    if(popupErr.code === 'auth/popup-closed-by-user' ||
        popupErr.code === 'auth/cancelled-popup-request') {
-      
-      if(popupErr.code === 'auth/popup-closed-by-user') {
-        // User cancelled - reset button
-        if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
-        if(loadMsg) loadMsg.style.display = 'none';
-        return;
-      }
-      
-      // Try redirect as fallback
-      try {
-        if(loadMsg) document.getElementById('loginLoadingText').textContent = 'Redirecting to Google...';
-        await firebase.auth().signInWithRedirect(getGoogleProvider());
-        return; // Page will reload
-      } catch(redirectErr) {
-        console.warn('Redirect also failed:', redirectErr.message);
-      }
+      if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
+      if(loadMsg) loadMsg.style.display = 'none';
+      return;
     }
-    
-    // Both failed
-    if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
-    if(loadMsg) loadMsg.style.display = 'none';
-    
+
+    // Network error - no internet
     if(popupErr.code === 'auth/network-request-failed') {
+      if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
+      if(loadMsg) loadMsg.style.display = 'none';
       showModal('📵', 'No Internet', 'Check your internet connection and try again.', 'error');
-    } else {
+      return;
+    }
+
+    // Any other popup failure - try redirect
+    try {
+      if(loadMsg) { loadMsg.style.display = 'block'; document.getElementById('loginLoadingText').textContent = 'Redirecting to Google...'; }
+      await firebase.auth().signInWithRedirect(getGoogleProvider());
+      return;
+    } catch(redirectErr) {
+      console.warn('Redirect also failed:', redirectErr.message);
+      if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
+      if(loadMsg) loadMsg.style.display = 'none';
       showModal('❌', 'Login Failed', 'Google sign-in failed. Please try again.', 'error');
     }
   }
