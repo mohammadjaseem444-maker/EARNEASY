@@ -2138,50 +2138,36 @@ function getGoogleProvider() {
 async function loginWithGoogle() {
   const btn = document.getElementById('googleLoginBtn');
   const loadMsg = document.getElementById('loginLoadingMsg');
-  
-  if(btn) { 
-    btn.disabled = true; 
-    btn.style.opacity = '0.6'; 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening Google...'; 
-  }
-  if(loadMsg) { 
-    loadMsg.style.display = 'block';
-    document.getElementById('loginLoadingText').textContent = 'Opening Google sign-in...';
+
+  if(btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...'; }
+  if(loadMsg) loadMsg.style.display = 'block';
+
+  // Firebase ready nahi to silently wait (max 15s) - no toast
+  if(typeof firebase === 'undefined' || !firebaseReady) {
+    let w = 0;
+    while((typeof firebase === 'undefined' || !firebaseReady) && w < 150) {
+      await new Promise(r => setTimeout(r, 100));
+      w++;
+    }
   }
 
-  // Try popup first (better for low RAM - no page reload needed)
-  try {
-    const result = await firebase.auth().signInWithPopup(getGoogleProvider());
-    await handleGoogleResult(result.user);
+  if(typeof firebase === 'undefined' || !firebaseReady) {
+    if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
+    if(loadMsg) loadMsg.style.display = 'none';
+    showModal('📵', 'No Internet', 'Check your internet connection and try again.', 'error');
     return;
-  } catch(popupErr) {
-    console.warn('Popup failed:', popupErr.code);
-    
-    // User cancelled - reset button, don't try redirect
-    if(popupErr.code === 'auth/popup-closed-by-user' ||
-       popupErr.code === 'auth/cancelled-popup-request') {
-      if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
-      if(loadMsg) loadMsg.style.display = 'none';
-      return;
-    }
+  }
 
-    // Network error - no internet
-    if(popupErr.code === 'auth/network-request-failed') {
-      if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
-      if(loadMsg) loadMsg.style.display = 'none';
+  // Redirect - works on ALL mobile browsers + GitHub Pages
+  try {
+    await firebase.auth().signInWithRedirect(getGoogleProvider());
+  } catch(e) {
+    console.warn('Redirect failed:', e.code, e.message);
+    if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
+    if(loadMsg) loadMsg.style.display = 'none';
+    if(e.code === 'auth/network-request-failed') {
       showModal('📵', 'No Internet', 'Check your internet connection and try again.', 'error');
-      return;
-    }
-
-    // Any other popup failure - try redirect
-    try {
-      if(loadMsg) { loadMsg.style.display = 'block'; document.getElementById('loginLoadingText').textContent = 'Redirecting to Google...'; }
-      await firebase.auth().signInWithRedirect(getGoogleProvider());
-      return;
-    } catch(redirectErr) {
-      console.warn('Redirect also failed:', redirectErr.message);
-      if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
-      if(loadMsg) loadMsg.style.display = 'none';
+    } else {
       showModal('❌', 'Login Failed', 'Google sign-in failed. Please try again.', 'error');
     }
   }
