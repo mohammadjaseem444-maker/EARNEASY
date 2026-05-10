@@ -47,26 +47,11 @@ FIREBASE RULES - PASTE IN FIREBASE CONSOLE → DATABASE → RULES → PUBLISH:
 -->
 <html lang="en">
 <head>
-<script>
-// Emergency: 8 second mein guaranteed login screen
-setTimeout(function() {
-  try {
-    var s = document.getElementById('splash');
-    var l = document.getElementById('loginScreen');
-    var a = document.getElementById('app');
-    if (s) { s.style.opacity = '0'; s.style.display = 'none'; }
-    if (l && a && !a.classList.contains('active') && !l.classList.contains('active')) {
-      l.classList.add('active');
-    }
-  } catch(e) {}
-}, 15000);
-</script>
-
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>EARNEASY</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'"/>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"/>
 <!-- Monetag SDK — Daily Ads & Daily Bonus -->
 <script async src='//libtl.com/sdk.js' data-zone='10726400' data-sdk='show_10726400'></script>
 <!-- Monetag SDK — Math Game -->
@@ -78,9 +63,9 @@ setTimeout(function() {
 <!-- Monetag SDK — Tasks (Follow & Earn + View & Earn) -->
 <script async src='//libtl.com/sdk.js' data-zone='10761884' data-sdk='show_10761884'></script>
 <!-- Firebase SDK — loaded in head for early availability -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script async src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script async src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script async src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
 <style>
 :root {
@@ -2138,41 +2123,46 @@ function getGoogleProvider() {
 async function loginWithGoogle() {
   const btn = document.getElementById('googleLoginBtn');
   const loadMsg = document.getElementById('loginLoadingMsg');
+  if(btn) { btn.disabled=true; btn.style.opacity='0.6'; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Signing in...'; }
+  if(loadMsg) loadMsg.style.display='block';
 
-  if(btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...'; }
-  if(loadMsg) loadMsg.style.display = 'block';
-
-  // Firebase ready nahi to silently wait (max 15s) - no toast
-  if(typeof firebase === 'undefined' || !firebaseReady) {
-    let w = 0;
-    while((typeof firebase === 'undefined' || !firebaseReady) && w < 150) {
-      await new Promise(r => setTimeout(r, 100));
-      w++;
-    }
+  // Firebase ka silently wait (max 10s)
+  let fw = 0;
+  while((typeof firebase === 'undefined' || !firebaseReady) && fw < 100) {
+    await new Promise(r => setTimeout(r, 100));
+    fw++;
   }
 
-  if(typeof firebase === 'undefined' || !firebaseReady) {
-    if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
-    if(loadMsg) loadMsg.style.display = 'none';
-    showModal('📵', 'No Internet', 'Check your internet connection and try again.', 'error');
+  if(!firebaseReady) {
+    if(btn) { btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=getSVGGoogleBtn(); }
+    if(loadMsg) loadMsg.style.display='none';
+    showModal('📵','No Internet','Check internet & try again.','error');
     return;
   }
 
-  // Redirect - works on ALL mobile browsers + GitHub Pages
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.addScope('email');
+  provider.addScope('profile');
+
   try {
-    await firebase.auth().signInWithRedirect(getGoogleProvider());
+    const result = await firebase.auth().signInWithPopup(provider);
+    if(result.user) await handleGoogleResult(result.user);
   } catch(e) {
-    console.warn('Redirect failed:', e.code, e.message);
-    if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
-    if(loadMsg) loadMsg.style.display = 'none';
-    if(e.code === 'auth/network-request-failed') {
-      showModal('📵', 'No Internet', 'Check your internet connection and try again.', 'error');
-    } else {
-      showModal('❌', 'Login Failed', 'Google sign-in failed. Please try again.', 'error');
+    console.warn('Popup failed:', e.code);
+    if(e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+      if(btn) { btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=getSVGGoogleBtn(); }
+      if(loadMsg) loadMsg.style.display='none';
+      return;
+    }
+    try {
+      await firebase.auth().signInWithRedirect(provider);
+    } catch(e2) {
+      if(btn) { btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=getSVGGoogleBtn(); }
+      if(loadMsg) loadMsg.style.display='none';
+      showModal('❌','Login Failed','Try again.','error');
     }
   }
 }
-
 async function handleGoogleResult(user) {
   const btn = document.getElementById('googleLoginBtn');
   const loadMsg = document.getElementById('loginLoadingMsg');
@@ -4974,59 +4964,68 @@ function showToast(msg) {
 // ============================================================
 // SPLASH & INIT
 // ============================================================
-var _appInitDone = false;
-async function _appInit() {
-  if (_appInitDone) return;
-  _appInitDone = true;
-
-  initFirebase();
+window.addEventListener('load', async () => {
   startNetworkMonitor();
 
+  // Splash 2s mein hide
   setTimeout(() => {
-    const splash = document.getElementById('splash');
-    if(splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 600); }
+    const s = document.getElementById('splash');
+    if(s) { s.style.opacity='0'; setTimeout(()=>{ s.style.display='none'; }, 500); }
   }, 2000);
 
-  try { await Promise.race([checkRedirectResult(), new Promise(r => setTimeout(r, 3000))]); } catch(e) {}
+  // Firebase async hai - wait karo max 5s
+  let fw = 0;
+  while(typeof firebase === 'undefined' && fw < 50) {
+    await new Promise(r => setTimeout(r, 100));
+    fw++;
+  }
 
-  if(document.getElementById('app').classList.contains('active')) return;
+  // Firebase init
+  initFirebase();
 
+  // Firebase nahi aaya - login show karo
   if(!firebaseReady) {
-    setTimeout(() => { document.getElementById('loginScreen').classList.add('active'); }, 500);
+    setTimeout(() => {
+      document.getElementById('loginScreen').classList.add('active');
+    }, 500);
     return;
   }
 
-  let _authHandled = false;
+  // Redirect result check (3s timeout)
+  try {
+    const result = await Promise.race([
+      firebase.auth().getRedirectResult(),
+      new Promise(r => setTimeout(() => r(null), 3000))
+    ]);
+    if(result && result.user) {
+      currentUser = result.user.uid;
+      const loaded = await loadUserData(result.user.uid);
+      if(loaded) { enterApp(); return; }
+      else { _pendingGoogleUser = result.user; showProfileSetup(result.user); return; }
+    }
+  } catch(e) { console.warn('Redirect:', e.code); }
+
+  if(document.getElementById('app').classList.contains('active')) return;
+
+  // Auth listener
   firebase.auth().onAuthStateChanged(async (user) => {
-    if(_authHandled) return;
     if(document.getElementById('app').classList.contains('active')) return;
-    _authHandled = true;
+    const setup = document.getElementById('profileSetupScreen');
+    if(setup && setup.style.display === 'flex') return;
     if(user) {
       currentUser = user.uid;
-      const fbLoaded = await loadUserData(user.uid);
-      if(fbLoaded) {
-        if(!userData.email && user.email) userData.email = user.email;
-        if(!userData.photoURL && user.photoURL) userData.photoURL = user.photoURL;
-        if(!userData.name && user.displayName) userData.name = user.displayName;
+      const loaded = await loadUserData(user.uid);
+      if(loaded) {
+        if(user.displayName && !userData.name) userData.name = user.displayName;
+        if(user.email && !userData.email) userData.email = user.email;
         saveLocal();
         enterApp();
-      } else {
-        _pendingGoogleUser = user;
-        showProfileSetup(user);
-      }
+      } else { _pendingGoogleUser = user; showProfileSetup(user); }
     } else {
       document.getElementById('loginScreen').classList.add('active');
     }
   });
-
-  setTimeout(() => {
-    if(!_authHandled) { _authHandled = true; document.getElementById('loginScreen').classList.add('active'); }
-  }, 5000);
-}
-
-document.addEventListener('DOMContentLoaded', _appInit);
-window.addEventListener('load', _appInit);
-setTimeout(_appInit, 3000);
+});
 
 // Enter key on setup name input
 const setupNameEl = document.getElementById('setupNameInput');
