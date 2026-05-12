@@ -2224,10 +2224,7 @@ function getSVGGoogleBtn() {
 // Check redirect result when page loads back (fallback)
 async function checkRedirectResult() {
   try {
-    const result = await Promise.race([
-      firebase.auth().getRedirectResult(),
-      new Promise(r => setTimeout(() => r(null), 3000))
-    ]);
+    const result = await firebase.auth().getRedirectResult();
     if(result && result.user) {
       const loadMsg = document.getElementById('loginLoadingMsg');
       if(loadMsg) {
@@ -4980,53 +4977,43 @@ function showToast(msg) {
 // ============================================================
 // SPLASH & INIT
 // ============================================================
-window.addEventListener('load', async () => {
+window.addEventListener('load', () => {
   initFirebase();
 
-  // Hide splash after 2 seconds regardless
-  setTimeout(() => {
-    const splash = document.getElementById('splash');
-    if(splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 500); }
-  }, 2000);
+  setTimeout(async () => {
+    document.getElementById('splash').style.opacity = '0';
+    setTimeout(() => { document.getElementById('splash').style.display = 'none'; }, 600);
 
-  // Auth state handler with fallback timeout
-  let _authHandled = false;
-  
-  const _handleAuth = async (user) => {
-    if(_authHandled) return;
-    if(document.getElementById('app').classList.contains('active')) return;
-    const _setupEl = document.getElementById('profileSetupScreen');
-    if(_setupEl && _setupEl.style.display === 'flex') return;
-    _authHandled = true;
-    
-    if(user) {
-      currentUser = user.uid;
-      const fbLoaded = await loadUserData(user.uid);
-      if(fbLoaded) {
-        if(user.displayName) userData.name = userData.name || user.displayName;
-        if(user.photoURL) userData.photoURL = userData.photoURL || user.photoURL;
-        saveLocal();
-        enterApp();
-      } else {
-        _pendingGoogleUser = user;
-        showProfileSetup(user);
-      }
+    if(firebaseReady) {
+      firebase.auth().onAuthStateChanged(async (user) => {
+        if(document.getElementById('app').classList.contains('active')) return;
+        if(user) {
+          currentUser = user.uid;
+          const fbLoaded = await loadUserData(user.uid);
+          if(fbLoaded) {
+            if(user.displayName) userData.name = userData.name || user.displayName;
+            if(user.photoURL) userData.photoURL = userData.photoURL || user.photoURL;
+            saveLocal();
+            enterApp();
+          } else {
+            _pendingGoogleUser = user;
+            showProfileSetup(user);
+          }
+        } else {
+          const hasLocal = loadLocal();
+          if(hasLocal && !firebaseReady) {
+            enterApp();
+          } else {
+            document.getElementById('loginScreen').classList.add('active');
+          }
+        }
+      });
     } else {
-      document.getElementById('loginScreen').classList.add('active');
+      const hasLocal = loadLocal();
+      if(hasLocal) enterApp();
+      else document.getElementById('loginScreen').classList.add('active');
     }
-  };
-
-  if(firebaseReady) {
-    firebase.auth().onAuthStateChanged(_handleAuth);
-  }
-  
-  // Fallback: if auth doesn't fire in 5s, show login
-  setTimeout(() => {
-    if(!_authHandled) {
-      _authHandled = true;
-      document.getElementById('loginScreen').classList.add('active');
-    }
-  }, 5000);
+  }, 2200);
 });
 
 // Enter key on setup name input
