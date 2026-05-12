@@ -2224,7 +2224,10 @@ function getSVGGoogleBtn() {
 // Check redirect result when page loads back (fallback)
 async function checkRedirectResult() {
   try {
-    const result = await firebase.auth().getRedirectResult();
+    const result = await Promise.race([
+      firebase.auth().getRedirectResult(),
+      new Promise(r => setTimeout(() => r(null), 3000))
+    ]);
     if(result && result.user) {
       const loadMsg = document.getElementById('loginLoadingMsg');
       if(loadMsg) {
