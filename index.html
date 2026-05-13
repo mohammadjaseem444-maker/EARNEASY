@@ -63,10 +63,6 @@ FIREBASE RULES - PASTE IN FIREBASE CONSOLE → DATABASE → RULES → PUBLISH:
 <!-- Monetag SDK — Tasks (Follow & Earn + View & Earn) -->
 <script async src='//libtl.com/sdk.js' data-zone='10761884' data-sdk='show_10761884'></script>
 <!-- Firebase SDK — loaded in head for early availability -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-
 <style>
 :root {
   --bg: #f0f4f0;
@@ -1632,6 +1628,11 @@ body.slow-net .splash-spinner {
 <div id="toast"></div>
 
 <!-- Firebase SDK loaded in <head> -->
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
 <script>
 // ============================================================
@@ -4977,7 +4978,7 @@ function showToast(msg) {
 // ============================================================
 // SPLASH & INIT
 // ============================================================
-window.addEventListener('load', () => {
+document.addEventListener('DOMContentLoaded', () => {
   initFirebase();
 
   setTimeout(async () => {
