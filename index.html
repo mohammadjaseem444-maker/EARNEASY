@@ -753,6 +753,7 @@ body.slow-net .splash-spinner {
     var s = document.getElementById('splash');
     if(s && s.style.display !== 'none'){
       s.style.opacity = '0';
+      s.style.pointerEvents = 'none';
       s.style.transition = 'opacity 0.5s';
       setTimeout(function(){ s.style.display = 'none'; }, 500);
     }
@@ -814,7 +815,7 @@ body.slow-net .splash-spinner {
     </div>
 
     <!-- Google Login Button -->
-    <button onclick="loginWithGoogle()" id="googleLoginBtn" style="width:100%;padding:14px 20px;border-radius:14px;border:2px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;font-family:Rajdhani,sans-serif;font-size:1rem;font-weight:700;color:#374151;margin-bottom:14px;transition:all 0.2s;box-shadow:0 2px 12px #0000000f;">
+    <button id="googleLoginBtn" style="width:100%;padding:14px 20px;border-radius:14px;border:2px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;font-family:Rajdhani,sans-serif;font-size:1rem;font-weight:700;color:#374151;margin-bottom:14px;transition:all 0.2s;box-shadow:0 2px 12px #0000000f;">
       <svg width="22" height="22" viewBox="0 0 48 48">
         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
         <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
@@ -2167,13 +2168,15 @@ async function loginWithGoogle() {
     await firebase.auth().signInWithRedirect(getGoogleProvider());
     // Page reloads — getRedirectResult() handles it on return
   } catch(err) {
-    console.warn('Redirect failed:', err.message);
+    console.warn('Redirect failed:', err.code, err.message);
     if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
     if(loadMsg) loadMsg.style.display = 'none';
     if(err.code === 'auth/network-request-failed') {
       showModal('📵', 'No Internet', 'Check your connection and try again.', 'error');
+    } else if(err.code === 'auth/unauthorized-domain') {
+      showModal('⚙️', 'Domain Not Authorized', 'Firebase Console mein domain add karo: mohammadjaseem444-maker.github.io', 'error');
     } else {
-      showModal('❌', 'Login Failed', 'Could not open Google sign-in. Try again.', 'error');
+      showModal('❌', 'Login Failed [' + (err.code || 'unknown') + ']', err.message || 'Could not open Google sign-in.', 'error');
     }
   }
 }
@@ -4991,7 +4994,11 @@ window.addEventListener('load', async () => {
   // ALWAYS hide splash after 2s — no matter what
   setTimeout(() => {
     const s = document.getElementById('splash');
-    if(s) { s.style.opacity='0'; setTimeout(()=>{ s.style.display='none'; }, 500); }
+    if(s) { 
+      s.style.opacity='0'; 
+      s.style.pointerEvents='none';
+      setTimeout(()=>{ s.style.display='none'; }, 500); 
+    }
   }, 2000);
 
   // Handle Google redirect login (mobile)
@@ -5052,6 +5059,9 @@ window.addEventListener('load', async () => {
     }
   });
 });
+
+// Google login button
+document.getElementById('googleLoginBtn').addEventListener('click', loginWithGoogle);
 
 // Enter key on setup name input
 const setupNameEl = document.getElementById('setupNameInput');
