@@ -2145,55 +2145,35 @@ function getGoogleProvider() {
 async function loginWithGoogle() {
   const btn = document.getElementById('googleLoginBtn');
   const loadMsg = document.getElementById('loginLoadingMsg');
-  
-  if(btn) { 
-    btn.disabled = true; 
-    btn.style.opacity = '0.6'; 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening Google...'; 
-  }
-  if(loadMsg) { 
-    loadMsg.style.display = 'block';
-    document.getElementById('loginLoadingText').textContent = 'Opening Google sign-in...';
+
+  if(!firebaseReady) {
+    showModal('❌', 'Not Ready', 'App is still loading. Please wait a moment and try again.', 'error');
+    return;
   }
 
-  // Try popup first (better for low RAM - no page reload needed)
+  if(btn) {
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting...';
+  }
+  if(loadMsg) {
+    loadMsg.style.display = 'block';
+    const lt = document.getElementById('loginLoadingText');
+    if(lt) lt.textContent = 'Opening Google sign-in...';
+  }
+
+  // Direct redirect — popup blocked on Telegram WebApp + mobile browsers
   try {
-    const result = await firebase.auth().signInWithPopup(getGoogleProvider());
-    await handleGoogleResult(result.user);
-    return;
-  } catch(popupErr) {
-    console.warn('Popup failed:', popupErr.code);
-    
-    // If popup blocked or not supported - use redirect
-    if(popupErr.code === 'auth/popup-blocked' || 
-       popupErr.code === 'auth/popup-closed-by-user' ||
-       popupErr.code === 'auth/cancelled-popup-request') {
-      
-      if(popupErr.code === 'auth/popup-closed-by-user') {
-        // User cancelled - reset button
-        if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
-        if(loadMsg) loadMsg.style.display = 'none';
-        return;
-      }
-      
-      // Try redirect as fallback
-      try {
-        if(loadMsg) document.getElementById('loginLoadingText').textContent = 'Redirecting to Google...';
-        await firebase.auth().signInWithRedirect(getGoogleProvider());
-        return; // Page will reload
-      } catch(redirectErr) {
-        console.warn('Redirect also failed:', redirectErr.message);
-      }
-    }
-    
-    // Both failed
+    await firebase.auth().signInWithRedirect(getGoogleProvider());
+    // Page reloads — getRedirectResult() handles it on return
+  } catch(err) {
+    console.warn('Redirect failed:', err.message);
     if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
     if(loadMsg) loadMsg.style.display = 'none';
-    
-    if(popupErr.code === 'auth/network-request-failed') {
-      showModal('📵', 'No Internet', 'Check your internet connection and try again.', 'error');
+    if(err.code === 'auth/network-request-failed') {
+      showModal('📵', 'No Internet', 'Check your connection and try again.', 'error');
     } else {
-      showModal('❌', 'Login Failed', 'Google sign-in failed. Please try again.', 'error');
+      showModal('❌', 'Login Failed', 'Could not open Google sign-in. Try again.', 'error');
     }
   }
 }
