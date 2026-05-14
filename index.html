@@ -50,8 +50,10 @@ FIREBASE RULES - PASTE IN FIREBASE CONSOLE → DATABASE → RULES → PUBLISH:
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>EARNEASY</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" media="print" onload="this.media='all'"/>
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/></noscript>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/>
+<noscript><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet"/></noscript>
 <!-- Monetag SDK — Daily Ads & Daily Bonus -->
 <script async src='//libtl.com/sdk.js' data-zone='10726400' data-sdk='show_10726400'></script>
 <!-- Monetag SDK — Math Game -->
@@ -743,6 +745,29 @@ body.slow-net .splash-spinner {
   <div class="sub">EARN COINS · WITHDRAW CASH</div>
   <div class="spin-wheel"></div>
 </div>
+<script>
+// GUARANTEED SPLASH KILLER — runs immediately at parse time, zero dependencies
+// Even if Firebase, Monetag, Font Awesome all fail — splash WILL hide in 3.5s
+(function(){
+  setTimeout(function(){
+    var s = document.getElementById('splash');
+    if(s && s.style.display !== 'none'){
+      s.style.opacity = '0';
+      s.style.transition = 'opacity 0.5s';
+      setTimeout(function(){ s.style.display = 'none'; }, 500);
+    }
+    // If app not open yet, show login
+    var app = document.getElementById('app');
+    var login = document.getElementById('loginScreen');
+    var setup = document.getElementById('profileSetupScreen');
+    if(app && !app.classList.contains('active') &&
+       setup && setup.style.display !== 'flex' &&
+       login && !login.classList.contains('active')){
+      login.classList.add('active');
+    }
+  }, 3500);
+})();
+</script>
 
 <!-- NO INTERNET SCREEN -->
 <div id="noInternetScreen" style="display:none;position:fixed;inset:0;background:#f0f4f0;z-index:9999;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:30px;">
@@ -1630,9 +1655,9 @@ body.slow-net .splash-spinner {
 <!-- Firebase SDK loaded in <head> -->
 
 <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
 <script>
 // ============================================================
@@ -4975,17 +5000,17 @@ function showToast(msg) {
 // SPLASH & INIT
 // ============================================================
 window.addEventListener('load', async () => {
-  // Step 1: Init Firebase + network monitor immediately
+  // window.load fires even when CDN fails — works everywhere ✅
   initFirebase();
   startNetworkMonitor();
 
-  // Step 2: Always hide splash after 2s no matter what
+  // ALWAYS hide splash after 2s — no matter what
   setTimeout(() => {
     const s = document.getElementById('splash');
     if(s) { s.style.opacity='0'; setTimeout(()=>{ s.style.display='none'; }, 500); }
   }, 2000);
 
-  // Step 3: Handle Google redirect result (mobile login)
+  // Handle Google redirect login (mobile)
   if(firebaseReady) {
     try {
       const result = await firebase.auth().getRedirectResult();
@@ -5006,10 +5031,10 @@ window.addEventListener('load', async () => {
           return;
         }
       }
-    } catch(e) { console.warn('Redirect result error:', e); }
+    } catch(e) { console.warn('Redirect result:', e); }
   }
 
-  // Step 4: Firebase not ready — show login after splash
+  // Firebase not ready — show login after splash
   if(!firebaseReady) {
     setTimeout(() => {
       const ls = document.getElementById('loginScreen');
@@ -5018,7 +5043,7 @@ window.addEventListener('load', async () => {
     return;
   }
 
-  // Step 5: Auth state listener — handles logged-in & logged-out
+  // Auth state listener
   firebase.auth().onAuthStateChanged(async (user) => {
     if(document.getElementById('app').classList.contains('active')) return;
     const setup = document.getElementById('profileSetupScreen');
