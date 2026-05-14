@@ -2105,10 +2105,6 @@ function generateCode(name) {
 // ============================================================
 // LOGIN
 // ============================================================
-function toggleRefInput() {
-  const g = document.getElementById('refInputGroup');
-  g.style.display = g.style.display === 'none' ? 'block' : 'none';
-}
 
 // Google login
 // Store Google user temporarily during profile setup
@@ -4978,43 +4974,74 @@ function showToast(msg) {
 // ============================================================
 // SPLASH & INIT
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('load', async () => {
+  // Step 1: Init Firebase + network monitor immediately
   initFirebase();
+  startNetworkMonitor();
 
-  setTimeout(async () => {
-    document.getElementById('splash').style.opacity = '0';
-    setTimeout(() => { document.getElementById('splash').style.display = 'none'; }, 600);
+  // Step 2: Always hide splash after 2s no matter what
+  setTimeout(() => {
+    const s = document.getElementById('splash');
+    if(s) { s.style.opacity='0'; setTimeout(()=>{ s.style.display='none'; }, 500); }
+  }, 2000);
 
-    if(firebaseReady) {
-      firebase.auth().onAuthStateChanged(async (user) => {
-        if(document.getElementById('app').classList.contains('active')) return;
-        if(user) {
-          currentUser = user.uid;
-          const fbLoaded = await loadUserData(user.uid);
-          if(fbLoaded) {
-            if(user.displayName) userData.name = userData.name || user.displayName;
-            if(user.photoURL) userData.photoURL = userData.photoURL || user.photoURL;
-            saveLocal();
-            enterApp();
-          } else {
-            _pendingGoogleUser = user;
-            showProfileSetup(user);
-          }
+  // Step 3: Handle Google redirect result (mobile login)
+  if(firebaseReady) {
+    try {
+      const result = await firebase.auth().getRedirectResult();
+      if(result && result.user) {
+        const user = result.user;
+        currentUser = user.uid;
+        const loaded = await loadUserData(user.uid);
+        if(loaded) {
+          if(user.displayName && !userData.name) userData.name = user.displayName;
+          if(user.email && !userData.email) userData.email = user.email;
+          if(user.photoURL && !userData.photoURL) userData.photoURL = user.photoURL;
+          saveLocal();
+          enterApp();
+          return;
         } else {
-          const hasLocal = loadLocal();
-          if(hasLocal && !firebaseReady) {
-            enterApp();
-          } else {
-            document.getElementById('loginScreen').classList.add('active');
-          }
+          _pendingGoogleUser = user;
+          showProfileSetup(user);
+          return;
         }
-      });
+      }
+    } catch(e) { console.warn('Redirect result error:', e); }
+  }
+
+  // Step 4: Firebase not ready — show login after splash
+  if(!firebaseReady) {
+    setTimeout(() => {
+      const ls = document.getElementById('loginScreen');
+      if(ls) ls.classList.add('active');
+    }, 2000);
+    return;
+  }
+
+  // Step 5: Auth state listener — handles logged-in & logged-out
+  firebase.auth().onAuthStateChanged(async (user) => {
+    if(document.getElementById('app').classList.contains('active')) return;
+    const setup = document.getElementById('profileSetupScreen');
+    if(setup && setup.style.display === 'flex') return;
+
+    if(user) {
+      currentUser = user.uid;
+      const loaded = await loadUserData(user.uid);
+      if(loaded) {
+        if(user.displayName && !userData.name) userData.name = user.displayName;
+        if(user.email && !userData.email) userData.email = user.email;
+        if(user.photoURL && !userData.photoURL) userData.photoURL = user.photoURL;
+        saveLocal();
+        enterApp();
+      } else {
+        _pendingGoogleUser = user;
+        showProfileSetup(user);
+      }
     } else {
-      const hasLocal = loadLocal();
-      if(hasLocal) enterApp();
-      else document.getElementById('loginScreen').classList.add('active');
+      const ls = document.getElementById('loginScreen');
+      if(ls) ls.classList.add('active');
     }
-  }, 2200);
+  });
 });
 
 // Enter key on setup name input
