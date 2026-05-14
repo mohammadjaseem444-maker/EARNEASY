@@ -1655,9 +1655,9 @@ body.slow-net .splash-spinner {
 <!-- Firebase SDK loaded in <head> -->
 
 <!-- Firebase SDK -->
-<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
 <script>
 // ============================================================
@@ -4999,9 +4999,13 @@ function showToast(msg) {
 // ============================================================
 // SPLASH & INIT
 // ============================================================
+// Init Firebase immediately — don't wait for any event
+// So login button works even if window.load is delayed
+initFirebase();
+
 window.addEventListener('load', async () => {
   // window.load fires even when CDN fails — works everywhere ✅
-  initFirebase();
+  if(!firebaseReady) initFirebase(); // retry if first call was too early
   startNetworkMonitor();
 
   // ALWAYS hide splash after 2s — no matter what
