@@ -746,6 +746,15 @@ body.slow-net .splash-spinner {
   <div class="spin-wheel"></div>
 </div>
 <script>
+// Catch ALL JS errors — show on screen
+window.onerror = function(msg, src, line, col, err){
+  var d = document.createElement('div');
+  d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:red;color:#fff;padding:8px;font-size:12px;';
+  d.textContent = 'JS ERROR: ' + msg + ' (line ' + line + ')';
+  document.body && document.body.appendChild(d);
+  return false;
+};
+
 // GUARANTEED SPLASH KILLER + BUTTON LISTENER
 (function(){
   // Step 1: Guaranteed splash hide after 3.5s
@@ -2162,29 +2171,31 @@ function getGoogleProvider() {
 
 async function loginWithGoogle() {
   const btn = document.getElementById('googleLoginBtn');
-  
+
+  // Visual feedback FIRST — before any checks
+  if(btn) {
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening Google...';
+  }
+
+  // Retry Firebase init if not ready
+  if(!firebaseReady) initFirebase();
+
   if(!firebaseReady) {
-    showToast('App loading... try again', 'warning');
+    if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
+    alert('App still loading. Please wait 2 seconds and try again.');
     return;
   }
-  
+
   try {
-    if(btn) {
-      btn.disabled = true;
-      btn.style.opacity = '0.6';
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening Google...';
-    }
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
     await firebase.auth().signInWithRedirect(provider);
   } catch(e) {
-    if(btn) {
-      btn.disabled = false;
-      btn.style.opacity = '1';
-      btn.innerHTML = getSVGGoogleBtn();
-    }
-    showToast('Login failed: ' + (e.message || 'Try again'), 'error');
+    if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
+    alert('Login error: ' + (e.code || e.message || 'Unknown error'));
     console.error('Login error:', e);
   }
 }
