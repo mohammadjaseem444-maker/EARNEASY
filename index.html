@@ -776,23 +776,6 @@ window.onerror = function(msg, src, line, col, err){
     }
   }, 3500);
 
-  // Step 2: Guaranteed button listener — independent of main script errors
-  document.addEventListener('DOMContentLoaded', function(){
-    var btn = document.getElementById('googleLoginBtn');
-    if(btn){
-      btn.addEventListener('click', function(){
-        if(typeof loginWithGoogle === 'function'){
-          loginWithGoogle();
-        } else {
-          btn.textContent = 'Loading... Tap again in 2s';
-          setTimeout(function(){
-            btn.innerHTML = '<span style="font-size:1.2rem">G</span> Continue with Google';
-            if(typeof loginWithGoogle === 'function') loginWithGoogle();
-          }, 2000);
-        }
-      });
-    }
-  });
 })();
 </script>
 
@@ -2170,52 +2153,43 @@ function getGoogleProvider() {
 }
 
 async function loginWithGoogle() {
-  const btn = document.getElementById('googleLoginBtn');
+  if(loginWithGoogle._running) return; // Prevent double-trigger
+  loginWithGoogle._running = true;
 
+  const btn = document.getElementById('googleLoginBtn');
   if(btn) {
     btn.disabled = true;
     btn.style.opacity = '0.6';
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening Google...';
   }
 
-  if(!firebaseReady) initFirebase();
-
-  if(!firebaseReady) {
+  const reset = () => {
+    loginWithGoogle._running = false;
     if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
-    alert('App still loading. Please wait and try again.');
-    return;
-  }
+  };
+
+  if(!firebaseReady) initFirebase();
+  if(!firebaseReady) { reset(); alert('App loading, please wait 2s and try again.'); return; }
 
   const provider = new firebase.auth.GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
 
-  // Try popup first — no page reload, works great on low RAM
   try {
     const result = await firebase.auth().signInWithPopup(provider);
-    if(result && result.user) {
-      await handleGoogleResult(result.user);
-    }
-    return;
-  } catch(popupErr) {
-    // Popup blocked — fall back to redirect
-    if(popupErr.code === 'auth/popup-closed-by-user' ||
-       popupErr.code === 'auth/cancelled-popup-request') {
-      // User closed popup — reset button
-      if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
-      return;
-    }
-    // Any other popup error — use redirect
-    console.warn('Popup failed, trying redirect:', popupErr.code);
-  }
-
-  // Redirect fallback
-  try {
-    if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting...';
-    await firebase.auth().signInWithRedirect(provider);
+    loginWithGoogle._running = false;
+    if(result && result.user) await handleGoogleResult(result.user);
   } catch(e) {
-    if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
-    alert('Login error: ' + (e.code || e.message || 'Unknown error'));
+    reset();
+    if(e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+    if(e.code === 'auth/popup-blocked') {
+      // Only use redirect if popup is truly blocked
+      try {
+        await firebase.auth().signInWithRedirect(provider);
+      } catch(re) { alert('Login error: ' + (re.code || re.message)); }
+    } else {
+      alert('Login error: ' + (e.code || e.message));
+    }
   }
 }
 
@@ -5099,7 +5073,6 @@ window.addEventListener('load', async () => {
 });
 
 // Google login button
-document.getElementById('googleLoginBtn').addEventListener('click', loginWithGoogle);
 
 // Enter key on setup name input
 const setupNameEl = document.getElementById('setupNameInput');
