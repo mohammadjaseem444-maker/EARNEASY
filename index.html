@@ -2172,31 +2172,50 @@ function getGoogleProvider() {
 async function loginWithGoogle() {
   const btn = document.getElementById('googleLoginBtn');
 
-  // Visual feedback FIRST — before any checks
   if(btn) {
     btn.disabled = true;
     btn.style.opacity = '0.6';
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening Google...';
   }
 
-  // Retry Firebase init if not ready
   if(!firebaseReady) initFirebase();
 
   if(!firebaseReady) {
     if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
-    alert('App still loading. Please wait 2 seconds and try again.');
+    alert('App still loading. Please wait and try again.');
     return;
   }
 
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.addScope('email');
+  provider.addScope('profile');
+
+  // Try popup first — no page reload, works great on low RAM
   try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.addScope('email');
-    provider.addScope('profile');
+    const result = await firebase.auth().signInWithPopup(provider);
+    if(result && result.user) {
+      await handleGoogleResult(result.user);
+    }
+    return;
+  } catch(popupErr) {
+    // Popup blocked — fall back to redirect
+    if(popupErr.code === 'auth/popup-closed-by-user' ||
+       popupErr.code === 'auth/cancelled-popup-request') {
+      // User closed popup — reset button
+      if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
+      return;
+    }
+    // Any other popup error — use redirect
+    console.warn('Popup failed, trying redirect:', popupErr.code);
+  }
+
+  // Redirect fallback
+  try {
+    if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting...';
     await firebase.auth().signInWithRedirect(provider);
   } catch(e) {
     if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
     alert('Login error: ' + (e.code || e.message || 'Unknown error'));
-    console.error('Login error:', e);
   }
 }
 
