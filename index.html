@@ -746,9 +746,9 @@ body.slow-net .splash-spinner {
   <div class="spin-wheel"></div>
 </div>
 <script>
-// GUARANTEED SPLASH KILLER — runs immediately at parse time, zero dependencies
-// Even if Firebase, Monetag, Font Awesome all fail — splash WILL hide in 3.5s
+// GUARANTEED SPLASH KILLER + BUTTON LISTENER
 (function(){
+  // Step 1: Guaranteed splash hide after 3.5s
   setTimeout(function(){
     var s = document.getElementById('splash');
     if(s && s.style.display !== 'none'){
@@ -757,7 +757,6 @@ body.slow-net .splash-spinner {
       s.style.transition = 'opacity 0.5s';
       setTimeout(function(){ s.style.display = 'none'; }, 500);
     }
-    // If app not open yet, show login
     var app = document.getElementById('app');
     var login = document.getElementById('loginScreen');
     var setup = document.getElementById('profileSetupScreen');
@@ -767,6 +766,24 @@ body.slow-net .splash-spinner {
       login.classList.add('active');
     }
   }, 3500);
+
+  // Step 2: Guaranteed button listener — independent of main script errors
+  document.addEventListener('DOMContentLoaded', function(){
+    var btn = document.getElementById('googleLoginBtn');
+    if(btn){
+      btn.addEventListener('click', function(){
+        if(typeof loginWithGoogle === 'function'){
+          loginWithGoogle();
+        } else {
+          btn.textContent = 'Loading... Tap again in 2s';
+          setTimeout(function(){
+            btn.innerHTML = '<span style="font-size:1.2rem">G</span> Continue with Google';
+            if(typeof loginWithGoogle === 'function') loginWithGoogle();
+          }, 2000);
+        }
+      });
+    }
+  });
 })();
 </script>
 
@@ -815,7 +832,7 @@ body.slow-net .splash-spinner {
     </div>
 
     <!-- Google Login Button -->
-    <button id="googleLoginBtn" style="width:100%;padding:14px 20px;border-radius:14px;border:2px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;font-family:Rajdhani,sans-serif;font-size:1rem;font-weight:700;color:#374151;margin-bottom:14px;transition:all 0.2s;box-shadow:0 2px 12px #0000000f;">
+    <button onclick="loginWithGoogle()" id="googleLoginBtn" style="width:100%;padding:14px 20px;border-radius:14px;border:2px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;font-family:Rajdhani,sans-serif;font-size:1rem;font-weight:700;color:#374151;margin-bottom:14px;transition:all 0.2s;box-shadow:0 2px 12px #0000000f;">
       <svg width="22" height="22" viewBox="0 0 48 48">
         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
         <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
@@ -2145,39 +2162,30 @@ function getGoogleProvider() {
 
 async function loginWithGoogle() {
   const btn = document.getElementById('googleLoginBtn');
-  const loadMsg = document.getElementById('loginLoadingMsg');
-
+  
   if(!firebaseReady) {
-    showModal('❌', 'Not Ready', 'App is still loading. Please wait a moment and try again.', 'error');
+    showToast('App loading... try again', 'warning');
     return;
   }
-
-  if(btn) {
-    btn.disabled = true;
-    btn.style.opacity = '0.6';
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting...';
-  }
-  if(loadMsg) {
-    loadMsg.style.display = 'block';
-    const lt = document.getElementById('loginLoadingText');
-    if(lt) lt.textContent = 'Opening Google sign-in...';
-  }
-
-  // Direct redirect — popup blocked on Telegram WebApp + mobile browsers
+  
   try {
-    await firebase.auth().signInWithRedirect(getGoogleProvider());
-    // Page reloads — getRedirectResult() handles it on return
-  } catch(err) {
-    console.warn('Redirect failed:', err.code, err.message);
-    if(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = getSVGGoogleBtn(); }
-    if(loadMsg) loadMsg.style.display = 'none';
-    if(err.code === 'auth/network-request-failed') {
-      showModal('📵', 'No Internet', 'Check your connection and try again.', 'error');
-    } else if(err.code === 'auth/unauthorized-domain') {
-      showModal('⚙️', 'Domain Not Authorized', 'Firebase Console mein domain add karo: mohammadjaseem444-maker.github.io', 'error');
-    } else {
-      showModal('❌', 'Login Failed [' + (err.code || 'unknown') + ']', err.message || 'Could not open Google sign-in.', 'error');
+    if(btn) {
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening Google...';
     }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope('email');
+    provider.addScope('profile');
+    await firebase.auth().signInWithRedirect(provider);
+  } catch(e) {
+    if(btn) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = getSVGGoogleBtn();
+    }
+    showToast('Login failed: ' + (e.message || 'Try again'), 'error');
+    console.error('Login error:', e);
   }
 }
 
